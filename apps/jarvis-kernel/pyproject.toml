@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jarvis-kernel"
+version = "0.2.0"
+description = "Le cœur gouverné d'HELYOS — bus, gouvernance A0–A5, mémoire, agents."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "À décider — voir CODEX/ADR/ADR-0005-licence.md" }
+authors = [{ name = "Le Conservateur (HELYOS)" }]
+keywords = ["helyos", "jarvis", "agents", "gouvernance", "local-first"]
+
+# Le CŒUR ne dépend que de la bibliothèque standard (Local First, ADN 2).
+dependencies = []
+
+[project.optional-dependencies]
+# Couche serveur (API HTTP) — optionnelle.
+server = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "pydantic>=2.5",
+  "httpx>=0.27",
+]
+# Outils de développement.
+dev = [
+  "pytest>=8.0",
+]
+
+[project.scripts]
+jarvis-kernel = "jarvis_kernel.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

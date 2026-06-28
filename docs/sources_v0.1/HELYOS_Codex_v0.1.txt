@@ -1,0 +1,150 @@
+
+# HELYOS – Synthèse fondatrice (v0.1)
+
+> Ce document ne remplace pas les conversations futures. Il capture les idées structurantes.
+
+## Vision
+HELYOS = Helye + OS.
+Entreprise construisant un système d'exploitation de l'intelligence personnelle.
+
+Jarvis est un produit d'HELYOS, pas l'entreprise.
+
+Mission :
+- Augmenter durablement les capacités humaines.
+- Transformer le temps en actifs.
+- Construire une intelligence opérationnelle gouvernée.
+- Local-first.
+- Open-source-first.
+- Modulaire.
+- Auditée.
+- Explicable.
+- Évolutive.
+
+## Philosophie
+
+Le but n'est pas de construire un chatbot.
+Le but est de construire un système capable de :
+- Comprendre.
+- Décider.
+- Agir.
+- Transmettre.
+
+Le projet est conçu comme une institution de très long terme.
+
+Objectif ultime :
+Créer une plateforme capable d'exister et d'évoluer sur plusieurs générations, avec une vision à très long terme (horizon de plusieurs siècles voire millénaires comme idéal philosophique).
+
+## ADN (résumé)
+
+1. Vision avant technologie.
+2. Local First.
+3. Open Source First.
+4. Modularité absolue.
+5. Pas de dette technique volontaire.
+6. Tout est observable.
+7. Jarvis apprend.
+8. Tout est mesurable.
+9. Intelligence composée.
+10. Héritage et transmission.
+11. Complexité maîtrisée.
+12. Construire pour les générations futures.
+13. Les revenus financent la recherche.
+14. Une fonctionnalité doit supprimer une friction mesurable.
+15. Relire le Codex avant toute stratégie.
+16. Aucune décision importante ne reste uniquement dans une conversation.
+
+## Architecture
+
+HELYOS
+ ├─ HELYOS OS
+ ├─ Jarvis
+ │   ├─ Voice
+ │   ├─ Vision
+ │   ├─ Memory
+ │   ├─ Business
+ │   ├─ Research
+ │   ├─ Robotics
+ │   └─ Kernel
+ ├─ HELYOS Labs
+ ├─ HELYOS Research
+ └─ HELYOS Ventures
+
+Jarvis = Kernel + Mémoire + Agents + Outils + Gouvernance + Observabilité.
+
+## Technologies
+
+- FastAPI
+- Docker
+- PostgreSQL
+- Redis
+- Qdrant
+- Ollama
+- LiteLLM
+- LangGraph
+- LlamaIndex
+- Haystack
+- OpenTelemetry
+- Langfuse
+- Prometheus
+- Grafana
+- Loki
+- MinIO
+- Playwright
+- MediaPipe
+- MCP
+
+API cloud : uniquement si nécessaire.
+
+## Gouvernance
+
+Autonomie graduée :
+A0 Lecture
+A1 Préparation
+A2 Exécution avec validation
+A3 Exécution faible risque
+A4 Gestion contrôlée
+A5 Autonomie stratégique (vision long terme uniquement)
+
+Jamais :
+- suppression sans sauvegarde,
+- action externe sensible sans validation,
+- auto-escalade des permissions.
+
+## Économie
+
+Objectif :
+Créer une boucle :
+
+Recherche
+→ Produits
+→ Revenus
+→ Patrimoine
+→ Recherche
+
+Vision financière :
+- rémunérer durablement le fondateur,
+- constituer un patrimoine,
+- financer massivement la R&D.
+
+Cible ambitieuse :
+Atteindre un niveau où HELYOS peut financer sa propre évolution.
+
+## Organisation
+
+Le fondateur est le Conservateur.
+Le Codex est la source de vérité.
+Les IA sont des architectes/ingénieurs spécialisés.
+
+## Codex Vivant
+
+Le Codex est versionné.
+Toutes les décisions importantes deviennent des RFC ou décisions documentées.
+Aucun modèle IA n'est la vérité ; le Codex l'est.
+
+## Objectif produit
+
+Construire une intelligence opérationnelle personnelle inspirée de l'esprit de Jarvis,
+mais fondée sur des technologies réelles, ouvertes, modulaires et durables.
+
+IMPORTANT :
+Ce document est une synthèse. Les futures décisions devront enrichir le Codex plutôt que dépendre de la mémoire d'un modèle.
