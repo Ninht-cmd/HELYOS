@@ -52,8 +52,9 @@ HELYOS/
 
 | | |
 |---|---|
-| **Version** | v0.2 (fondations exécutables) |
-| **Statut** | Pré-Alpha — kernel + Codex |
+| **Version** | v0.3 (fondations Alpha) |
+| **Statut** | Alpha — mémoire persistante, observabilité, premier agent |
+| **Écosystème** | Aligné sur Isaac GR00T / Riva / NeMo — voir [état de l'art](CODEX/08_ECOSYSTEME/00_Etat_de_lart.md) & [fusion](CODEX/02_ARCHITECTURE/05_Fusion_HELYOS_Jarvis.md) |
 | **Licence** | À décider — voir [ADR-0005](CODEX/ADR/ADR-0005-licence.md) |
 | **Conservateur** | Le fondateur |
 

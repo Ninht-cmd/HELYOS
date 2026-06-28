@@ -21,5 +21,6 @@ Draft  →  In Review  →  Accepted  →  (donne lieu à ADR / implémentation)
 | RFC | Titre | Statut |
 |-----|-------|--------|
 | [0001](RFC-0001-jarvis-kernel-v0.md) | Périmètre du Kernel Jarvis v0 | Accepted |
+| [0002](RFC-0002-scribe-agent.md) | ScribeAgent : le premier agent utile | Accepted |
 
 Gabarit : [`_template.md`](_template.md).

@@ -28,15 +28,36 @@ src/jarvis_kernel/
 │  ├─ autonomy.py             # AutonomyLevel A0–A5
 │  ├─ policy.py               # PolicyEngine + règles d'or (GR-1…GR-7)
 │  ├─ audit.py                # Journal d'audit immuable
-│  └─ service.py              # Évalue → journalise → publie
-├─ memory/store.py            # MemoryStore (impl en mémoire ; cible Postgres/Qdrant)
-├─ agents/base.py             # Agent + AgentRegistry (+ ObserverAgent A0)
-├─ observability/telemetry.py # Logs structurés JSON (prêt OTel/Langfuse)
+│  └─ service.py              # Évalue → journalise → publie (instrumenté OTel)
+├─ memory/
+│  ├─ store.py                # MemoryStore (interface) + InMemory
+│  ├─ sqlite_store.py         # ✦ Persistant local (défaut hors tests)
+│  ├─ postgres_store.py       # ✦ Adaptateur Postgres (optionnel)
+│  ├─ vector.py               # ✦ NaiveVectorMemory (local) + Qdrant (optionnel)
+│  └─ __init__.py             # build_memory(backend)
+├─ agents/
+│  ├─ base.py                 # Agent + AgentRegistry (+ ObserverAgent A0)
+│  └─ scribe.py               # ✦ ScribeAgent (A2) — rédige des ADR (RFC-0002)
+├─ observability/
+│  ├─ telemetry.py            # Logs structurés JSON
+│  └─ tracing.py              # ✦ OpenTelemetry → OTLP/Langfuse (no-op si absent)
 ├─ api/                       # Couche FastAPI (optionnelle)
 ├─ context.py                 # Câblage partagé des composants
 ├─ config.py                  # Settings (env, stdlib)
 └─ main.py                    # create_app() — application ASGI
 ```
+
+> ✦ = ajouts **Alpha (v0.3)** : mémoire persistante, observabilité, premier agent.
+
+### Configuration (variables d'env)
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `HELYOS_MEMORY_BACKEND` | `memory` | `memory` \| `sqlite` (persistant) \| `postgres` |
+| `HELYOS_MEMORY_PATH` | `helyos_memory.sqlite` | Chemin SQLite |
+| `HELYOS_OTEL_ENABLED` | `0` | `1` pour activer le tracing |
+| `HELYOS_OTEL_ENDPOINT` | `http://localhost:4318` | Collecteur OTLP / Langfuse |
+| `HELYOS_DEFAULT_AUTONOMY` | `A1` | Niveau accordé par défaut |
 
 ## Le flux d'une intention
 

@@ -5,5 +5,6 @@ Logs structurés en stdlib par défaut ; hooks prêts pour OpenTelemetry / Langf
 """
 
 from .telemetry import configure_logging, get_logger
+from .tracing import is_enabled, setup_tracing, span
 
-__all__ = ["get_logger", "configure_logging"]
+__all__ = ["get_logger", "configure_logging", "setup_tracing", "span", "is_enabled"]

@@ -15,6 +15,7 @@ Toute action passe par ici avant exécution (ADR-0003). Le flux :
 from __future__ import annotations
 
 from ..kernel.event_bus import EventBus
+from ..observability.tracing import span
 from .audit import AuditEntry, AuditLog
 from .autonomy import AutonomyLevel
 from .policy import Action, Decision, PolicyEngine, PolicyVerdict
@@ -33,6 +34,17 @@ class GovernanceService:
 
     def submit(self, action: Action, granted: AutonomyLevel) -> PolicyVerdict:
         """Évalue, journalise et publie. Retourne le verdict."""
+        with span(
+            "governance.submit",
+            **{
+                "helyos.action_type": action.type.value,
+                "helyos.actor": action.actor,
+                "helyos.granted_level": granted.name,
+            },
+        ):
+            return self._submit(action, granted)
+
+    def _submit(self, action: Action, granted: AutonomyLevel) -> PolicyVerdict:
         verdict = self.engine.evaluate(action, granted)
 
         self.audit.append(
