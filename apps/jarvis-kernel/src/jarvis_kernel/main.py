@@ -18,8 +18,11 @@ logger = get_logger(__name__)
 
 def create_app():
     """Construit l'application FastAPI et câble le contexte du Kernel."""
+    from pathlib import Path
+
     from fastapi import FastAPI  # import local : ne charge FastAPI que si on crée l'app
-    from fastapi.responses import HTMLResponse
+    from fastapi.responses import HTMLResponse, RedirectResponse
+    from fastapi.staticfiles import StaticFiles
 
     from .api.dashboard import DASHBOARD_HTML
     from .api.routes import router
@@ -36,9 +39,23 @@ def create_app():
     app.state.kernel = ctx
     app.include_router(router)
 
-    @app.get("/", response_class=HTMLResponse, tags=["kernel"], include_in_schema=False)
-    def root() -> str:
-        """Tableau de bord HTML (page d'accueil humaine)."""
+    web_dir = Path(__file__).resolve().parents[2] / "web"
+
+    if web_dir.is_dir():
+        # Interface immersive (WebGL) servie en statique sous /app.
+        app.mount("/app", StaticFiles(directory=str(web_dir), html=True), name="web")
+
+        @app.get("/", include_in_schema=False)
+        def root():
+            return RedirectResponse(url="/app/")
+    else:  # repli : pas de dossier web (ex. install minimale)
+        @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+        def root() -> str:
+            return DASHBOARD_HTML
+
+    @app.get("/classic", response_class=HTMLResponse, tags=["kernel"], include_in_schema=False)
+    def classic() -> str:
+        """Ancienne interface 2D (canvas) — repli/diagnostic."""
         return DASHBOARD_HTML
 
     @app.get("/info", tags=["kernel"])

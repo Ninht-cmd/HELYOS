@@ -23,6 +23,12 @@ licences respectives et ne sont **pas redistribués** par ce dépôt (installés
 > compatible avec une distribution propriétaire des modules Pro. Ne pas *modifier* psycopg
 > sans publier les modifications (LGPL).
 
+## Composants front **bundlés** (redistribués dans ce dépôt)
+
+| Composant | Emplacement | Licence | Note |
+|-----------|-------------|---------|------|
+| **Three.js** r0.160 | `apps/jarvis-kernel/web/vendor/three.module.js` | **MIT** | Vendu localement (local-first, pas de CDN). MIT compatible AGPL-3.0. Texte de licence inclus dans l'en-tête du fichier. |
+
 ## Services externes (non redistribués)
 
 Le `deploy/docker-compose.yml` référence des **images publiques** exécutées comme services
