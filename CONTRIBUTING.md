@@ -31,6 +31,17 @@ Pour un changement de code :
 - Les dépendances lourdes (FastAPI, etc.) restent dans des couches optionnelles.
 - Toute nouvelle dépendance = un **ADR** (justification + alternative open-source + sortie).
 
+## ⚖️ CLA — obligatoire (juridiquement critique)
+
+Toute contribution externe au cœur exige la signature d'un **CLA** (Contributor License
+Agreement) cédant/licenciant les droits au Conservateur. **Raison :** le modèle open-core
+([ADR-0008](CODEX/ADR/ADR-0008-open-core-business-model.md)) et le dual-licensing
+([ADR-0005](CODEX/ADR/ADR-0005-licence.md)) ne sont **légaux que si le Conservateur détient
+100 % du copyright du cœur**. Une PR sans CLA ne sera **pas** fusionnée. Voir
+[ADR-0009](CODEX/ADR/ADR-0009-conformite-legale.md) et [09_LEGAL](CODEX/09_LEGAL/00_Conformite_IP.md).
+
+> Ne jamais coller de code tiers sous licence copyleft/incompatible. Toute nouvelle dépendance = un ADR.
+
 ## Gouvernance des modules
 
 Un nouveau module **doit** passer le [test d'admission](CODEX/04_MODULES/00_Overview.md) (friction, gouvernance A0–A5, local-first, réversibilité, observabilité) via une RFC, avant tout code.

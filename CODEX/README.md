@@ -20,6 +20,7 @@ Ce Codex est **vivant** et **versionné**. Il grandit par accumulation de décis
 | 06 | [Roadmap](06_ROADMAP/00_Roadmap.md) | Les jalons jusqu'à « AGI Ready » |
 | 07 | [Tech](07_TECH/00_Stack.md) | La stack de référence |
 | 08 | [Écosystème](08_ECOSYSTEME/00_Etat_de_lart.md) | État de l'art (helyOS, NVIDIA Isaac/Riva/NeMo, OpenJarvis) + [fusion HELYOS × Jarvis](02_ARCHITECTURE/05_Fusion_HELYOS_Jarvis.md) |
+| 09 | [Légal](09_LEGAL/00_Conformite_IP.md) | Conformité, PI, risques de marque (Jarvis/helyOS), CLA, RGPD, disclaimers |
 | — | [ADR](ADR/README.md) | Décisions d'architecture (le *comment* et le *pourquoi* techniques) |
 | — | [RFC](RFC/README.md) | Propositions structurantes en discussion |
 | — | [Glossaire](GLOSSAIRE.md) | Vocabulaire HELYOS |
