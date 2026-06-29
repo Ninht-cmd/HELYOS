@@ -21,7 +21,7 @@ def _env(name: str, default: str) -> str:
 class Settings:
     """Paramètres du Kernel, immuables une fois chargés."""
 
-    app_name: str = "HELYOS Jarvis Kernel"
+    app_name: str = "HELYOS Kernel"
     version: str = "0.3.0"
     host: str = "127.0.0.1"
     port: int = 8080
@@ -40,7 +40,7 @@ class Settings:
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(
-            app_name=_env("HELYOS_APP_NAME", "HELYOS Jarvis Kernel"),
+            app_name=_env("HELYOS_APP_NAME", "HELYOS Kernel"),
             version=_env("HELYOS_VERSION", "0.3.0"),
             host=_env("HELYOS_HOST", "127.0.0.1"),
             port=int(_env("HELYOS_PORT", "8080")),

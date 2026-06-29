@@ -19,7 +19,9 @@ logger = get_logger(__name__)
 def create_app():
     """Construit l'application FastAPI et câble le contexte du Kernel."""
     from fastapi import FastAPI  # import local : ne charge FastAPI que si on crée l'app
+    from fastapi.responses import HTMLResponse
 
+    from .api.dashboard import DASHBOARD_HTML
     from .api.routes import router
 
     ctx = build_default_context()
@@ -34,8 +36,13 @@ def create_app():
     app.state.kernel = ctx
     app.include_router(router)
 
-    @app.get("/", tags=["kernel"])
-    def root() -> dict:
+    @app.get("/", response_class=HTMLResponse, tags=["kernel"], include_in_schema=False)
+    def root() -> str:
+        """Tableau de bord HTML (page d'accueil humaine)."""
+        return DASHBOARD_HTML
+
+    @app.get("/info", tags=["kernel"])
+    def info() -> dict:
         return {
             "name": ctx.settings.app_name,
             "version": ctx.settings.version,
