@@ -3,6 +3,17 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/). Le Codex
 versionne aussi ses décisions via [ADR](CODEX/ADR/README.md) / [RFC](CODEX/RFC/README.md).
 
+## [0.3.1] — 2026-06-29 — Modèle économique & licence
+
+### Stratégie / Codex
+- **Licence : AGPL-3.0** pour le cœur ouvert + **dual-licensing** commercial — [ADR-0005](CODEX/ADR/ADR-0005-licence.md) `Accepted`.
+  Fichier [`LICENSE`](LICENSE) ajouté (texte AGPL-3.0 verbatim). Résout le dépôt public « tous droits réservés ».
+- **Modèle Open Core** — [ADR-0008](CODEX/ADR/ADR-0008-open-core-business-model.md) `Accepted`.
+- Section Économie développée : [business model](CODEX/05_ECONOMIE/01_Business_Model.md) (paliers, chemin vers
+  ~100 k€/mois, wedge « IA gouvernée pour secteurs régulés ») + [frontière open/Pro](CODEX/05_ECONOMIE/02_Frontiere_Open_Core.md).
+- Orchestration d'agents : [RFC-0004](CODEX/RFC/RFC-0004-orchestration-agents.md) ; arbitrage du nom : [RFC-0003](CODEX/RFC/RFC-0003-arbitrage-du-nom.md).
+- Dépôt publié : https://github.com/Ninht-cmd/HELYOS
+
 ## [0.3.0] — 2026-06-29 — Fondations Alpha
 
 Entrée dans le jalon **Alpha** : mémoire persistante, observabilité, premier agent,

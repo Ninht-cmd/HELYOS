@@ -1,29 +1,50 @@
 # ADR-0005 — Choix de licence
 
-- **Statut** : Proposed
-- **Date** : 2026-06-28
+- **Statut** : Accepted
+- **Date** : 2026-06-29
 - **Décideur(s)** : Le Conservateur
 - **Principes ADN engagés** : 3, 12, 13
 
 ## Contexte
 
-HELYOS est **open-source-first** (ADN 3) mais doit aussi **financer la R&D** via des produits (ADN 13) et durer plusieurs générations (ADN 12). Le choix de licence doit concilier ouverture, protection contre l'appropriation non-réciproque, et capacité de monétisation.
+HELYOS est **open-source-first** (ADN 3) mais doit **financer la R&D** (ADN 13) et durer
+(ADN 12). Le projet adopte un modèle **open-core** ([ADR-0008](ADR-0008-open-core-business-model.md)) :
+un **cœur ouvert** (kernel, gouvernance, API de base, SDK) et des **modules commerciaux**
+(agents spécialisés, mémoire distribuée avancée, orchestration multi-IA, dashboard
+entreprise, déploiement 1-clic, support prioritaire). Ambition : trajectoire scale
+(cf. [business model](../05_ECONOMIE/01_Business_Model.md)).
 
-## Décision (proposée — à trancher)
+## Décision
 
-Plusieurs options sur la table, **non encore arbitrées** :
-
-| Option | Avantage | Risque |
-|--------|----------|--------|
-| **Apache-2.0** | Adoption maximale, clause brevets | Permet l'appropriation propriétaire sans réciprocité |
-| **AGPL-3.0** | Réciprocité forte (cloud inclus) | Peut freiner certains usages commerciaux tiers |
-| **Double licence** (AGPL + commerciale) | Ouverture **et** monétisation | Complexité de gestion |
-| **Source-available** (BSL → open après N ans) | Protège la monétisation initiale | Pas « open-source » au sens OSI |
+1. **Cœur open source sous AGPL-3.0.** Le copyleft fort protège contre l'exploitation
+   en SaaS fermé par un concurrent (toute modification servie sur le réseau doit être
+   rouverte). Fichier [`LICENSE`](../../LICENSE) à la racine = texte AGPL-3.0 verbatim.
+2. **Double licence (dual-licensing).** Le Conservateur **détient le copyright** du cœur,
+   ce qui permet de **vendre une licence commerciale** à qui ne peut/veut pas se conformer
+   à l'AGPL (entreprises, intégration propriétaire). C'est le levier de monétisation premier.
+3. **Modules commerciaux** = licence propriétaire, dans un **dépôt privé séparé** (`helyos-pro`),
+   jamais sous AGPL. La frontière est définie dans [02_Frontiere_Open_Core](../05_ECONOMIE/02_Frontiere_Open_Core.md).
+4. **CLA** (Contributor License Agreement) requis pour toute contribution externe future,
+   afin de préserver la capacité de double licence.
 
 ## Conséquences
 
-- À compléter une fois la décision prise. Cet ADR sera **remplacé** par une version `Accepted`.
+- **Positives** : ouverture réelle (ADN 3), **protection** contre les forks SaaS fermés,
+  monétisation par licence commerciale **et** par modules Pro, copyright maîtrisé.
+- **Négatives / coûts** : l'AGPL peut freiner certains usages d'entreprise → c'est *voulu*
+  (ça crée la demande de licence commerciale). Nécessite un CLA et une rigueur sur la
+  provenance du code (pas de code AGPL tiers dans les modules propriétaires).
+- **Chemin de sortie** : détenant le copyright, le Conservateur peut **re-licencier** le
+  cœur à l'avenir (ex. ajouter une exception) sans dépendre de tiers (tant qu'il n'y a pas
+  de contributeurs externes sans CLA).
 
-## Prochaine étape
+## Alternatives écartées
 
-Ouvrir une **RFC** comparant licences à la lumière de la [boucle économique](../05_ECONOMIE/00_Boucle_Economique.md) et de la stratégie Ventures.
+- *Apache-2.0* — adoption maximale mais **aucune protection** contre un SaaS fermé concurrent ;
+  incohérent avec une ambition de revenus à l'échelle.
+- *Tout propriétaire* — contraire à l'ADN 3, et prive de l'effet d'écosystème/adoption.
+- *MIT/BSD* — idem Apache, sans clause brevets.
+
+## Décisions liées
+- [ADR-0008](ADR-0008-open-core-business-model.md) — modèle open-core.
+- [Business model](../05_ECONOMIE/01_Business_Model.md) · [Frontière open-core](../05_ECONOMIE/02_Frontiere_Open_Core.md).

@@ -16,7 +16,7 @@ Ce Codex est **vivant** et **versionné**. Il grandit par accumulation de décis
 | 02 | [Architecture](02_ARCHITECTURE/00_Overview.md) | Modèle C4 : contexte → conteneurs → composants |
 | 03 | [Gouvernance](03_GOUVERNANCE/00_Autonomie_A0_A5.md) | Autonomie graduée **A0–A5** + [règles d'or](03_GOUVERNANCE/01_Regles_Or.md) |
 | 04 | [Modules](04_MODULES/00_Overview.md) | Les domaines fonctionnels |
-| 05 | [Économie](05_ECONOMIE/00_Boucle_Economique.md) | La boucle de financement de la R&D |
+| 05 | [Économie](05_ECONOMIE/00_Boucle_Economique.md) | [Boucle](05_ECONOMIE/00_Boucle_Economique.md) · [Business model open-core](05_ECONOMIE/01_Business_Model.md) · [Frontière open/Pro](05_ECONOMIE/02_Frontiere_Open_Core.md) |
 | 06 | [Roadmap](06_ROADMAP/00_Roadmap.md) | Les jalons jusqu'à « AGI Ready » |
 | 07 | [Tech](07_TECH/00_Stack.md) | La stack de référence |
 | 08 | [Écosystème](08_ECOSYSTEME/00_Etat_de_lart.md) | État de l'art (helyOS, NVIDIA Isaac/Riva/NeMo, OpenJarvis) + [fusion HELYOS × Jarvis](02_ARCHITECTURE/05_Fusion_HELYOS_Jarvis.md) |
