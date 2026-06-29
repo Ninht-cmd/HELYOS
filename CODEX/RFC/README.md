@@ -23,5 +23,6 @@ Draft  →  In Review  →  Accepted  →  (donne lieu à ADR / implémentation)
 | [0001](RFC-0001-jarvis-kernel-v0.md) | Périmètre du Kernel Jarvis v0 | Accepted |
 | [0002](RFC-0002-scribe-agent.md) | ScribeAgent : le premier agent utile | Accepted |
 | [0003](RFC-0003-arbitrage-du-nom.md) | Arbitrage du nom (HELYOS vs helyOS ; « Jarvis ») | In Review |
+| [0004](RFC-0004-orchestration-agents.md) | Orchestration d'agents composés (sous gouvernance) | Accepted |
 
 Gabarit : [`_template.md`](_template.md).

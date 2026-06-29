@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .agents.base import AgentRegistry, ObserverAgent
+from .agents.research import ResearchAgent
 from .agents.scribe import ScribeAgent
 from .config import Settings, settings as default_settings
 from .governance.audit import AuditLog
@@ -57,6 +58,7 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
     registry = AgentRegistry()
     registry.register(ObserverAgent())  # agent d'exemple A0 (perception)
     registry.register(ScribeAgent())    # premier agent utile : rédige des ADR (A2)
+    registry.register(ResearchAgent())  # agent d'analyse (A1), à composer
 
     return KernelContext(
         settings=cfg,
