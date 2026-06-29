@@ -40,8 +40,12 @@ Par ordre de valeur stratégique (ce qui constitue l'avance d'HELYOS) :
 | Dépôt | Visibilité | Licence | Contenu |
 |-------|-----------|---------|---------|
 | `Ninht-cmd/HELYOS` | **public** | AGPL-3.0 | le cœur ouvert (ce repo) |
-| `helyos-pro` *(à créer)* | **privé** | propriétaire | modules Pro/Enterprise |
+| `Ninht-cmd/helyos-pro` ✅ *(créé)* | **privé** | propriétaire | modules Pro/Enterprise — 1ᵉʳ module : `LegalReviewAgent` |
 | `helyos-cloud` *(à créer)* | **privé** | propriétaire | infra SaaS, déploiement managé |
+
+> **Preuve de la frontière (v0.1 de `helyos-pro`)** : le `LegalReviewAgent` importe le cœur
+> (`jarvis_kernel`) et s'enregistre via `register_pro_agents()` **sans modifier une seule ligne
+> du cœur** ; toutes ses actions passent par la gouvernance A0–A5. 6 tests le vérifient.
 
 Le cœur expose des **points d'extension** (ports, registre d'agents, `MemoryStore`, `LLMPort`)
 pour que `helyos-pro` se branche **sans modifier** le cœur (modularité, ADN 4). C'est la même
