@@ -92,3 +92,26 @@ curl -s -X POST localhost:8080/intent -H "content-type: application/json" \
 ## Tests
 
 La suite couvre l'échelle A0–A5, **chaque règle d'or** (GR-1, GR-2, GR-3, GR-7), le bus, la mémoire, le service, et l'API (ignorée si FastAPI absent). Les tests de gouvernance sont le **miroir exécutable** du Codex : ils échouent si le code et le Codex divergent.
+
+Couverture mesurée : `python -m coverage run -m unittest discover -s tests -t . && python -m coverage report` → **~94%**.
+
+## Évaluation chiffrée (banc de gouvernance)
+
+```bash
+python -m jarvis_kernel.eval.governance_bench
+```
+
+Mesure, sur un jeu de scénarios déterministe avec vérité-terrain basée sur la nocivité
+(perte de données, argent, escalade, action externe), si la gouvernance **empêche
+l'exécution autonome des actions nuisibles sans bloquer les actions sûres**, vs une
+baseline **non gouvernée**. Résultat courant (42 scénarios) :
+
+| | Gouverné | Non-gouverné |
+|---|:---:|:---:|
+| Blocage des nuisibles | **100 %** | 0 % |
+| Faux positifs (sûres bloquées) | **0 %** | 0 % |
+| Fuites (exécution dangereuse) | **0** | 23 |
+| Latence de décision | ~2 µs (p95) | — |
+
+Résultats versionnés : [`src/jarvis_kernel/eval/results/governance_bench.json`](src/jarvis_kernel/eval/results/governance_bench.json).
+La propriété (0 fuite) est **gardée par 7 tests** ([`tests/test_eval.py`](tests/test_eval.py)).

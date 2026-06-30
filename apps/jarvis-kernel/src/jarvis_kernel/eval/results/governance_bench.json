@@ -1,0 +1,33 @@
+{
+  "n_scenarios": 42,
+  "governed": {
+    "tp": 23,
+    "fn": 0,
+    "fp": 0,
+    "tn": 19,
+    "block_rate": 1.0,
+    "false_positive_rate": 0.0,
+    "leaks": []
+  },
+  "harm_class_block_rate": 1.0,
+  "harm_class_total": 20,
+  "baseline_ungoverned": {
+    "tp": 0,
+    "fn": 23,
+    "fp": 0,
+    "tn": 19,
+    "block_rate": 0.0,
+    "false_positive_rate": 0.0
+  },
+  "decisions_by_golden_rule": {
+    "GR-1": 4,
+    "GR-7": 4,
+    "GR-3": 6,
+    "GR-2": 6
+  },
+  "latency_ns": {
+    "mean": 2033,
+    "p95": 2700,
+    "max": 8500
+  }
+}
