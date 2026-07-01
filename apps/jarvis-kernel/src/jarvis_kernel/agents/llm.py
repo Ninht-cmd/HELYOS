@@ -30,6 +30,54 @@ class StubLLM(LLMPort):
         return f"{self.prefix} synthèse: {head}"
 
 
+class OllamaLLM(LLMPort):  # pragma: no cover - dépend d'un service externe (Ollama)
+    """Vrai modèle local via Ollama (API HTTP locale, stdlib uniquement).
+
+    Local First : aucune donnée ne sort de la machine. Pensée désactivée par défaut
+    (``/no_think`` + option) pour la latence ; balises ``<think>`` retirées par sécurité.
+    """
+
+    def __init__(self, model: str = "qwen3:8b", host: str = "http://localhost:11434",
+                 num_predict: int = 128, temperature: float = 0.2,
+                 think: bool = False, timeout: int = 120) -> None:
+        self.model = model
+        self.host = host.rstrip("/")
+        self.num_predict = num_predict
+        self.temperature = temperature
+        self.think = think
+        self.timeout = timeout
+
+    def complete(self, prompt: str, **kwargs) -> str:
+        import json
+        import re
+        import urllib.error
+        import urllib.request
+
+        body = {
+            "model": self.model,
+            "prompt": prompt if self.think else ("/no_think\n" + prompt),
+            "stream": False,
+            "think": self.think,
+            "options": {
+                "num_predict": int(kwargs.get("num_predict", self.num_predict)),
+                "temperature": float(kwargs.get("temperature", self.temperature)),
+            },
+        }
+        req = urllib.request.Request(self.host + "/api/generate",
+                                     data=json.dumps(body).encode(),
+                                     headers={"content-type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as r:
+                data = json.loads(r.read().decode())
+        except (urllib.error.URLError, OSError) as exc:
+            raise RuntimeError(
+                f"Ollama injoignable sur {self.host} ({exc}). "
+                "Lancer 'ollama serve' et 'ollama pull " + self.model + "'."
+            ) from exc
+        txt = data.get("response", "")
+        return re.sub(r"<think>.*?</think>", "", txt, flags=re.S).strip()
+
+
 class LiteLLMAdapter(LLMPort):  # pragma: no cover - dépend d'un service externe
     """Adaptateur LiteLLM (optionnel) → Ollama (local) ou API cloud (opt-in).
 

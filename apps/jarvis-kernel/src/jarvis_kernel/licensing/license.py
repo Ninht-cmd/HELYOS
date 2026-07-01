@@ -56,6 +56,19 @@ def _b64d(s: str) -> bytes:
     return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
 
 
+def sign_token(msg: str, secret: str) -> str:
+    """Signe une chaîne (HMAC-SHA256). Primitive réutilisable (ex. FlagVerifier)."""
+    return _b64e(hmac.new(secret.encode(), msg.encode(), hashlib.sha256).digest())
+
+
+def verify_token(msg: str, sig: str, secret: str) -> bool:
+    """Vérifie une signature en temps constant. Fail-closed : False si sig absente/fausse."""
+    if not sig:
+        return False
+    expected = sign_token(msg, secret)
+    return hmac.compare_digest(sig, expected)
+
+
 def sign_license(payload: dict, secret: str) -> str:
     """Crée une clé de licence signée (à exécuter côté détenteur du secret)."""
     body = _b64e(json.dumps(payload, separators=(",", ":"), sort_keys=True).encode())

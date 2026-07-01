@@ -5,7 +5,7 @@ soumises à la gouvernance. Orchestration cible : LangGraph (CODEX/07_TECH).
 """
 
 from .base import Agent, AgentRegistry, ObserverAgent
-from .llm import LLMPort, StubLLM
+from .llm import LLMPort, OllamaLLM, StubLLM
 from .orchestrator import Orchestrator, Step, StepResult
 from .research import ResearchAgent
 from .scribe import ScribeAgent
@@ -21,4 +21,5 @@ __all__ = [
     "StepResult",
     "LLMPort",
     "StubLLM",
+    "OllamaLLM",
 ]

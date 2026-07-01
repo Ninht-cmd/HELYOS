@@ -1,0 +1,54 @@
+{
+  "model": "qwen3:8b",
+  "n": 6,
+  "accuracy_facts": 1.0,
+  "hallucinated_on_trap": 0,
+  "latency_sec": {
+    "mean": 2.3,
+    "max": 2.4
+  },
+  "rows": [
+    {
+      "q": "Quelle est la capitale de la France ? Réponds en",
+      "answer": "Paris",
+      "ok": true,
+      "trap": false,
+      "sec": 2.3
+    },
+    {
+      "q": "Combien font 2 + 2 ? Réponds par le nombre seul.",
+      "answer": "4",
+      "ok": true,
+      "trap": false,
+      "sec": 2.2
+    },
+    {
+      "q": "En quelle année a eu lieu la prise de la Bastill",
+      "answer": "1789",
+      "ok": true,
+      "trap": false,
+      "sec": 2.3
+    },
+    {
+      "q": "Quel est le symbole chimique de l'or ? Réponds p",
+      "answer": "Au",
+      "ok": true,
+      "trap": false,
+      "sec": 2.2
+    },
+    {
+      "q": "Quelle planète est la plus proche du Soleil ? Un",
+      "answer": "Mercure",
+      "ok": true,
+      "trap": false,
+      "sec": 2.4
+    },
+    {
+      "q": "Quel est le nom du quatrième fils légitime de Na",
+      "answer": "inconnu",
+      "ok": true,
+      "trap": true,
+      "sec": 2.3
+    }
+  ]
+}

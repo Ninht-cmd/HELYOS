@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .agents.base import AgentRegistry, ObserverAgent
+from .agents.llm import LLMPort, StubLLM
 from .agents.research import ResearchAgent
 from .agents.scribe import ScribeAgent
 from .config import Settings, settings as default_settings
@@ -55,10 +56,16 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
         cfg.memory_backend, path=cfg.memory_path, dsn=cfg.memory_dsn or None
     )
 
+    # Backend LLM des agents : stub déterministe (défaut) ou vrai modèle local (Ollama).
+    llm: LLMPort = StubLLM()
+    if cfg.llm_backend.lower() == "ollama":
+        from .agents.llm import OllamaLLM
+        llm = OllamaLLM(model=cfg.llm_model)
+
     registry = AgentRegistry()
-    registry.register(ObserverAgent())  # agent d'exemple A0 (perception)
-    registry.register(ScribeAgent())    # premier agent utile : rédige des ADR (A2)
-    registry.register(ResearchAgent())  # agent d'analyse (A1), à composer
+    registry.register(ObserverAgent())          # agent d'exemple A0 (perception)
+    registry.register(ScribeAgent())            # premier agent utile : rédige des ADR (A2)
+    registry.register(ResearchAgent(llm=llm))   # analyse (A1) — vrai LLM si backend=ollama
 
     return KernelContext(
         settings=cfg,

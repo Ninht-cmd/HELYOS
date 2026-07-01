@@ -10,7 +10,9 @@ from .license import (
     LicenseError,
     require,
     sign_license,
+    sign_token,
     verify_license,
+    verify_token,
 )
 
 __all__ = [
@@ -20,4 +22,6 @@ __all__ = [
     "sign_license",
     "verify_license",
     "require",
+    "sign_token",
+    "verify_token",
 ]

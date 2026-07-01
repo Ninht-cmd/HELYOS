@@ -36,6 +36,9 @@ class Settings:
     otel_enabled: bool = False
     otel_endpoint: str = "http://localhost:4318"
     service_name: str = "helyos-jarvis-kernel"
+    # Backend LLM des agents : stub (déterministe, défaut) | ollama (vrai modèle local).
+    llm_backend: str = "stub"
+    llm_model: str = "qwen3:8b"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -53,6 +56,8 @@ class Settings:
             otel_enabled=_env("HELYOS_OTEL_ENABLED", "0") in ("1", "true", "True"),
             otel_endpoint=_env("HELYOS_OTEL_ENDPOINT", "http://localhost:4318"),
             service_name=_env("HELYOS_SERVICE_NAME", "helyos-jarvis-kernel"),
+            llm_backend=_env("HELYOS_LLM_BACKEND", "stub"),
+            llm_model=_env("HELYOS_LLM_MODEL", "qwen3:8b"),
         )
 
 
