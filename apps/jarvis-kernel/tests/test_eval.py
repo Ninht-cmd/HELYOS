@@ -7,6 +7,7 @@ from jarvis_kernel.eval.governance_bench import (
     build_scenarios,
     run,
     run_flag_verifier_phase,
+    run_reclassifier_phase,
 )
 
 
@@ -81,6 +82,25 @@ class TestFlagVerifierPhase(unittest.TestCase):
 
     def test_replay_of_other_proof_blocked(self):
         self.assertTrue(self.r["replay_blocked"])
+
+
+class TestReclassifierPhase(unittest.TestCase):
+    """Phase 2 : ferme les 4 sous-déclarations, 0 faux positif ; Phase 3 : paraphrase = faille connue."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.r = run_reclassifier_phase()
+
+    def test_closes_all_four_type_attacks(self):
+        self.assertEqual(self.r["type_attacks_closed"], self.r["type_attacks_total"])
+        self.assertEqual(self.r["type_attacks_closed"], 4)
+
+    def test_no_false_positive_on_honest_lexicon(self):
+        self.assertEqual(self.r["false_positives_on_honest_lexicon"], [])
+
+    def test_paraphrase_is_a_known_gap(self):
+        # LIMITE ASSUMÉE : le gate lexical ne bloque pas 100% des paraphrases.
+        self.assertLess(self.r["paraphrase_block_rate"], 1.0)
 
 
 if __name__ == "__main__":

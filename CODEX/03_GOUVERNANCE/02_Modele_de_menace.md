@@ -49,8 +49,15 @@ Autrement dit : **c'est une éthique *déclarée et appliquée à la déclaratio
    sur preuve réelle, **rejeu bloqué** (preuve d'un autre fichier rejetée). Verrouillé par
    `tests/test_flag_verifier.py` + `test_eval.py::TestFlagVerifierPhase`. Reste : les **4
    sous-déclarations de type** (Phase 2, `ReclassifierGate`).
-2. **Classification de l'action par le CONTENU** (pas seulement le type déclaré) :
-   - un classifieur (règles + modèle local) qui re-déduit le type réel à partir de la cible/description, et **prend le max** entre type déclaré et type déduit.
+2. **Classification de l'action par le CONTENU** — 🟡 **partiel (Phase 2)** :
+   `governance/reclassifier.py` re-déduit le type réel depuis la description (patrons *verbe→objet*,
+   pas simple mot-clé) et **prend le max** de nocivité. Mesuré : les **4 sous-déclarations** de type
+   passent de fuite → bloquées (escalade/paiement/exfiltration/suppression déguisées), **0 faux positif**
+   sur 6 actions honnêtes *porteuses du lexique* (« documenter la procédure de suppression » reste ALLOW).
+   ⚠️ **Limite prouvée (Phase 3)** : le gate est **lexical** → **0% de blocage sur paraphrases**
+   (« obtenir les privilèges admin », « prélèvement mensuel »…). Fermer la CLASSE exige un
+   **classifieur appris/embedder** (question de recherche 2). On ne prétend PAS « 6/6 robuste ».
+   Verrouillé : `tests/test_reclassifier.py` + `test_eval.py::TestReclassifierPhase`.
 3. **Exécution par capacités / sandbox** : l'agent n'obtient un *handle* d'exécution que pour ce que la gouvernance a réellement autorisé (principe du moindre privilège), au lieu d'exécuter librement après un simple « ALLOW ».
 4. **Provenance & intégrité** : signer les intentions, tracer la chaîne agent → intention → décision → exécution.
 
