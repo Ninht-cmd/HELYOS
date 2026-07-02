@@ -77,7 +77,24 @@ services:
     profiles: ["observability", "all"]
     ports: ["3100:3100"]
 
+  # --- Alimentation du RAG (A0 lecture, ADR-0010) — briques vérifiées, sûres ---
+  crawl4ai:
+    image: unclecode/crawl4ai:latest   # Apache-2.0 · web -> Markdown propre -> RAG
+    profiles: ["rag", "all"]
+    ports: ["11235:11235"]
+    shm_size: "1g"
+    # Sortie chunkée -> nomic-embed-text (Ollama) -> Qdrant. Déclenchement = action A0 tracée.
+
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:latest   # cœur MIT uniquement (ADR-0010) · PDF/OCR -> texte
+    profiles: ["rag", "all"]
+    ports: ["8081:8080"]                        # 8081 pour éviter le port du kernel
+    environment:
+      DOCKER_ENABLE_SECURITY: "false"
+    volumes: ["stirlingdata:/usr/share/tessdata"]
+
 volumes:
+  stirlingdata:
   pgdata:
   redisdata:
   qdrantdata:
