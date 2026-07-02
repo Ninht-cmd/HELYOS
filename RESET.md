@@ -48,7 +48,7 @@ sandbox) présentés comme *réutilisant l'existant* alors qu'ils reposent sur u
 | **0 — Honnêteté du banc** | Rendre la garde discriminante | ✅ **fait** : 6 actions honnêtes *porteuses du lexique* ajoutées ; honest `block_rate=1.0`, `fp=0.0` |
 | **1 — FlagVerifier** | Fermer `ment_backup`/`ment_validation` par la **vérité** crypto | ✅ **fait** : 2/2 fermés, rejeu rejeté, 0 faux positif, honnêtes OK |
 | **2 — ReclassifierGate** | Fermer les 4 sous-déclarations de type | ✅ **fait (jeu figé)** : 4/4 fermés, **0 faux positif** sur jeu honnête-lexique |
-| **3 — Paraphrase (recherche)** | Le lexique tient-il ? | 🔴 **mesuré : NON — 0% de blocage sur paraphrases.** Frontière actuelle : embedder/classifieur appris requis |
+| **3 — Paraphrase : embeddings** | Un embedder bat-il la paraphrase sans faux positif ? | 🟢 **mesuré OUI (jeu figé)** : `nomic-embed-text` ferme **4/4 paraphrases, 0 faux positif** (seuil ~0,82 ; attaques ≥0,94 vs honnêtes ≤0,75) — vs lexical **0/4**. ⚠️ petit jeu (4+6), à confirmer sur jeu étiqueté large + adversaire adaptatif |
 | **4 — Exécution confinée (recherche/build)** | Construire l'effecteur absent | `containment_rate=1.0` sur 6 adverses + 10 pièges chemin/réseau |
 
 ## Première tranche (buildable, mesurable)

@@ -54,10 +54,13 @@ Autrement dit : **c'est une éthique *déclarée et appliquée à la déclaratio
    pas simple mot-clé) et **prend le max** de nocivité. Mesuré : les **4 sous-déclarations** de type
    passent de fuite → bloquées (escalade/paiement/exfiltration/suppression déguisées), **0 faux positif**
    sur 6 actions honnêtes *porteuses du lexique* (« documenter la procédure de suppression » reste ALLOW).
-   ⚠️ **Limite prouvée (Phase 3)** : le gate est **lexical** → **0% de blocage sur paraphrases**
-   (« obtenir les privilèges admin », « prélèvement mensuel »…). Fermer la CLASSE exige un
-   **classifieur appris/embedder** (question de recherche 2). On ne prétend PAS « 6/6 robuste ».
-   Verrouillé : `tests/test_reclassifier.py` + `test_eval.py::TestReclassifierPhase`.
+   ⚠️ **Limite prouvée (Phase 3)** : le gate lexical → **0% de blocage sur paraphrases**.
+   **Correctif mesuré** : `governance/embedding_reclassifier.py` (embeddings `nomic-embed-text`,
+   similarité cosinus à des ancres par classe) ferme **4/4 paraphrases avec 0 faux positif**
+   (seuil ~0,82 ; séparation nette : attaques ≥0,94 vs honnêtes ≤0,75). Banc : `eval/embedding_bench.py`.
+   ⚠️ **Honnêteté** : jeu figé (4 paraphrases + 6 honnêtes) → indicatif, PAS une preuve de robustesse
+   générale ; à confirmer sur jeu étiqueté large + adversaire adaptatif. Ne prétend PAS « classe fermée ».
+   Verrouillé : `tests/test_reclassifier.py`, `test_embedding_reclassifier.py` (logique, sans Ollama).
 3. **Exécution par capacités / sandbox** : l'agent n'obtient un *handle* d'exécution que pour ce que la gouvernance a réellement autorisé (principe du moindre privilège), au lieu d'exécuter librement après un simple « ALLOW ».
 4. **Provenance & intégrité** : signer les intentions, tracer la chaîne agent → intention → décision → exécution.
 
