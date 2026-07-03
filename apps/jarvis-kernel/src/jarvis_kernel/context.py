@@ -14,6 +14,7 @@ from .agents.business_scaffolder import BusinessScaffolder
 from .agents.llm import LLMPort, StubLLM
 from .agents.research import ResearchAgent
 from .agents.scribe import ScribeAgent
+from .business.portfolio import BusinessPortfolio
 from .config import Settings, settings as default_settings
 from .governance.audit import AuditLog
 from .governance.policy import PolicyEngine
@@ -33,6 +34,7 @@ class KernelContext:
     vector: VectorMemory
     registry: AgentRegistry
     governance: GovernanceService
+    portfolio: BusinessPortfolio
 
 
 def build_default_context(settings: Settings | None = None) -> KernelContext:
@@ -76,4 +78,5 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
         vector=NaiveVectorMemory(),
         registry=registry,
         governance=governance,
+        portfolio=BusinessPortfolio(memory),   # HELYOS gère le portefeuille de business
     )
