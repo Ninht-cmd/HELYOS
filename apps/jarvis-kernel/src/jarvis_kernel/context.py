@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .agents.base import AgentRegistry, ObserverAgent
+from .agents.business_scaffolder import BusinessScaffolder
 from .agents.llm import LLMPort, StubLLM
 from .agents.research import ResearchAgent
 from .agents.scribe import ScribeAgent
@@ -66,6 +67,7 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
     registry.register(ObserverAgent())          # agent d'exemple A0 (perception)
     registry.register(ScribeAgent())            # premier agent utile : rédige des ADR (A2)
     registry.register(ResearchAgent(llm=llm))   # analyse (A1) — vrai LLM si backend=ollama
+    registry.register(BusinessScaffolder(llm=llm))  # scaffolde un business (A1) ; publication = A2 gouvernée
 
     return KernelContext(
         settings=cfg,
