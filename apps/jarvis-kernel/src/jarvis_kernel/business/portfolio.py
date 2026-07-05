@@ -107,9 +107,12 @@ def seed_known_businesses(portfolio: BusinessPortfolio) -> list[str]:
                  url="https://github.com/Ninht-cmd/HELYOS",
                  metrics={"stars": 0, "revenu_direct_eur": 0},
                  tasks=[{"task": "[HUMAIN] Build-in-public quotidien sur X", "done": False, "owner": "humain"}]),
-        Business(name="Business #4 (à confirmer)", kind="a_definir",
-                 status="à définir par le Conservateur",
-                 tasks=[{"task": "Nommer le 4e business", "done": False, "owner": "humain"}]),
+        Business(name="HELYOS Services (automatisation admin)", kind="service",
+                 status="v1 construit — agent 'relance de factures' opérationnel en démo",
+                 metrics={"revenue_eur": 0, "clients": 0, "agents_v1": 1},
+                 tasks=[{"task": "[HUMAIN] Valider la demande : montrer la démo à 3-5 artisans", "done": False, "owner": "humain"},
+                        {"task": "[HELYOS] Brancher l'envoi SMTP derrière la gouvernance (A2)", "done": False, "owner": "helyos"},
+                        {"task": "[HUMAIN] Décrocher le 1er client payant (niche étroite)", "done": False, "owner": "humain"}]),
     ]
     for b in known:
         portfolio.register(b)

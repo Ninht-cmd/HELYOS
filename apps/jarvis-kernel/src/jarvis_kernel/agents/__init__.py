@@ -6,6 +6,7 @@ soumises à la gouvernance. Orchestration cible : LangGraph (CODEX/07_TECH).
 
 from .base import Agent, AgentRegistry, ObserverAgent
 from .business_scaffolder import BusinessPlan, BusinessScaffolder, ProductIdea
+from .invoice_reminder import Invoice, InvoiceReminderAgent, Reminder
 from .llm import LLMPort, OllamaLLM, StubLLM
 from .orchestrator import Orchestrator, Step, StepResult
 from .research import ResearchAgent
@@ -26,4 +27,7 @@ __all__ = [
     "BusinessScaffolder",
     "BusinessPlan",
     "ProductIdea",
+    "InvoiceReminderAgent",
+    "Invoice",
+    "Reminder",
 ]
