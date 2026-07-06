@@ -97,6 +97,27 @@ class TestApi(unittest.TestCase):
         r = self.client.get("/governance/audit?limit=0")
         self.assertLessEqual(len(r.json()), 1)
 
+    def test_portfolio_detail_and_task_completion(self):
+        detail = self.client.get("/portfolio/detail").json()
+        helyos = next(b for b in detail if b["name"].startswith("HELYOS Services"))
+        before = helyos["open_tasks"]
+        self.assertGreater(before, 0)
+        prefix = next(t["task"] for t in helyos["tasks"] if not t["done"])[:30]
+        r = self.client.post("/portfolio/complete-task", json={
+            "business": helyos["name"], "task_prefix": prefix,
+        })
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["open_tasks"], before - 1)
+        # l'événement de pointage est tracé sur le bus
+        names = [e["name"] for e in self.client.get("/events?limit=20").json()]
+        self.assertIn("portfolio.task_done", names)
+
+    def test_complete_task_unknown_business_404(self):
+        r = self.client.post("/portfolio/complete-task", json={
+            "business": "N'existe pas", "task_prefix": "peu importe",
+        })
+        self.assertEqual(r.status_code, 404)
+
     def test_portfolio_returns_real_state_no_invented_metrics(self):
         r = self.client.get("/portfolio")
         self.assertEqual(r.status_code, 200)

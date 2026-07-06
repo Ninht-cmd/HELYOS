@@ -19,12 +19,14 @@ from ..governance.policy import Action, ActionType
 from .schemas import (
     AgentInfo,
     AuditEntryResponse,
+    BusinessDetail,
     HealthResponse,
     IntentRequest,
     JarvisReplyResponse,
     JarvisRequest,
     LevelInfo,
     PortfolioItem,
+    TaskCompleteRequest,
     VerdictResponse,
 )
 
@@ -133,3 +135,27 @@ def talk_to_jarvis(request: Request, body: JarvisRequest) -> JarvisReplyResponse
 def portfolio(request: Request) -> list[PortfolioItem]:
     """État réel du portefeuille de business — la source est la mémoire du Kernel."""
     return [PortfolioItem(**b) for b in _ctx(request).portfolio.summary()]
+
+
+@router.get("/portfolio/detail", response_model=list[BusinessDetail], tags=["business"])
+def portfolio_detail(request: Request) -> list[BusinessDetail]:
+    """Portefeuille avec les tâches — alimente le poste de pilotage."""
+    ctx = _ctx(request)
+    return [
+        BusinessDetail(name=b.name, kind=b.kind, status=b.status, metrics=b.metrics,
+                       open_tasks=b.open_tasks, tasks=b.tasks)
+        for b in ctx.portfolio.list()
+    ]
+
+
+@router.post("/portfolio/complete-task", response_model=BusinessDetail, tags=["business"])
+def complete_task(request: Request, body: TaskCompleteRequest) -> BusinessDetail:
+    """Coche une tâche (par préfixe). Bookkeeping interne : aucun effet monde,
+    donc pas de cérémonie de gouvernance — mais l'événement est tracé sur le bus."""
+    ctx = _ctx(request)
+    b = ctx.portfolio.complete_task(body.business, body.task_prefix)
+    if b is None:
+        raise HTTPException(status_code=404, detail=f"Business inconnu : {body.business!r}")
+    ctx.bus.emit("portfolio.task_done", business=body.business, task=body.task_prefix)
+    return BusinessDetail(name=b.name, kind=b.kind, status=b.status, metrics=b.metrics,
+                          open_tasks=b.open_tasks, tasks=b.tasks)

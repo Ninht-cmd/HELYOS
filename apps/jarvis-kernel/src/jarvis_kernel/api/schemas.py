@@ -97,3 +97,16 @@ class PortfolioItem(BaseModel):
     status: str
     metrics: dict
     open_tasks: int
+
+
+class BusinessDetail(PortfolioItem):
+    """Un business avec ses tâches (pour le poste de pilotage)."""
+
+    tasks: list[dict]
+
+
+class TaskCompleteRequest(BaseModel):
+    """Pointage d'une tâche du portefeuille (bookkeeping interne, aucun effet monde)."""
+
+    business: str = Field(..., min_length=1, examples=["HELYOS Services (automatisation admin)"])
+    task_prefix: str = Field(..., min_length=3, examples=["[HUMAIN] Semaine 1"])

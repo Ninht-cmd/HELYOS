@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HELYOS — Pilotage</title>
+<style>
+  /* Poste de pilotage de la holding. Contrat d'honnêteté : chaque chiffre affiché
+     vient du noyau (/portfolio, /governance/audit, /events). Zéro donnée inventée. */
+  :root{
+    --bg:#f6f8fa; --card:#ffffff; --ink:#111827; --muted:#6b7280; --faint:#9ca3af;
+    --line:#e5e7eb; --navy:#0e1726; --navy-ink:#cbd5e1;
+    --mint:#10b981; --mint-soft:#d1fae5; --amber:#f59e0b; --amber-soft:#fef3c7;
+    --coral:#ef4444; --coral-soft:#fee2e2; --violet:#8b5cf6;
+    --r:14px; --shadow:0 1px 3px rgba(16,24,40,.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  :focus-visible{outline:2px solid var(--mint);outline-offset:2px;border-radius:6px}
+
+  .shell{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+
+  /* ---- barre latérale ---- */
+  .side{background:var(--navy);color:var(--navy-ink);padding:22px 14px;display:flex;flex-direction:column;gap:4px}
+  .side .logo{color:#fff;font-weight:800;letter-spacing:2.5px;font-size:18px;padding:0 10px 18px}
+  .side .logo b{color:var(--mint)}
+  .side h3{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:#64748b;padding:14px 10px 6px}
+  .side a.nav{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:13.5px;transition:.2s}
+  .side a.nav:hover{background:rgba(255,255,255,.06);color:#fff}
+  .side a.nav.on{background:var(--mint);color:#04221b;font-weight:600}
+  .side a.nav .b{margin-left:auto;background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;
+    border-radius:99px;padding:1px 7px}
+  .side .soon{padding:9px 10px;font-size:13.5px;color:#475569;display:flex;gap:10px;align-items:center;cursor:not-allowed}
+  .side .soon em{margin-left:auto;font-style:normal;font-size:9.5px;border:1px solid #334155;color:#64748b;
+    border-radius:6px;padding:1px 5px}
+  .side .foot{margin-top:auto;padding:10px;font-size:11px;color:#64748b;line-height:1.5}
+
+  /* ---- contenu ---- */
+  .main{padding:26px 30px;max-width:1240px}
+  .head{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+  .head h1{font-size:22px;font-weight:700}
+  .head .st{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
+  .head .dot{width:8px;height:8px;border-radius:50%;background:var(--mint)}
+  .head .dot.off{background:var(--coral)}
+  .head .sp{flex:1}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--mint);color:#fff;border:0;cursor:pointer;
+    font:inherit;font-weight:600;font-size:13.5px;padding:10px 16px;border-radius:10px;transition:.2s}
+  .btn:hover{filter:brightness(1.07)}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start}
+  .col{display:flex;flex-direction:column;gap:20px;min-width:0}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px 16px;box-shadow:var(--shadow)}
+  .kpi .l{font-size:12px;color:var(--muted)}
+  .kpi .v{font-size:24px;font-weight:750;margin-top:5px;letter-spacing:-.5px}
+  .kpi .s{font-size:11px;color:var(--faint);margin-top:4px}
+  .kpi .v .u{font-size:14px;color:var(--muted);font-weight:600}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+  .card h2{font-size:14.5px;font-weight:700;padding:15px 18px 0;display:flex;align-items:center;gap:8px}
+  .card h2 em{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.8px;color:var(--mint);
+    background:var(--mint-soft);border-radius:6px;padding:2px 6px;text-transform:uppercase}
+  .card .bd{padding:10px 18px 16px}
+  .empty{font-size:12.5px;color:var(--faint);padding:8px 0}
+
+  /* à faire */
+  .task{display:flex;align-items:flex-start;gap:11px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .task:last-child{border-bottom:0}
+  .task input{width:17px;height:17px;margin-top:2px;accent-color:var(--mint);cursor:pointer;flex:none}
+  .task .t{font-size:13.5px;line-height:1.45}
+  .task .m{font-size:11px;color:var(--faint);margin-top:2px}
+  .task .own{margin-left:auto;flex:none;font-size:10px;font-weight:700;border-radius:6px;padding:2px 7px}
+  .own.humain{background:var(--amber-soft);color:#92400e}
+  .own.helyos{background:var(--mint-soft);color:#065f46}
+
+  /* entreprises */
+  .biz{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px;padding:12px 18px 18px}
+  .bz{border:1px solid var(--line);border-radius:12px;padding:13px 14px;display:flex;flex-direction:column;gap:7px;min-width:0}
+  .bz .n{font-size:13.5px;font-weight:650;line-height:1.3}
+  .bz .k{font-size:11px;color:var(--muted);text-transform:capitalize}
+  .bz .stt{font-size:11.5px;color:var(--muted);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .bz .row{display:flex;align-items:center;gap:7px;margin-top:auto;padding-top:6px}
+  .bz .ca{font-size:13px;font-weight:700}
+  .bz .tg{margin-left:auto;font-size:10.5px;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+  .bz.new{border-style:dashed;align-items:center;justify-content:center;text-align:center;color:var(--muted);
+    font-size:12.5px;gap:4px;cursor:pointer;transition:.2s;min-height:118px}
+  .bz.new:hover{border-color:var(--mint);color:var(--mint)}
+  .bz.new .plus{font-size:20px;font-weight:300}
+
+  /* droite : approbations + messages */
+  .apr{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .apr:last-child{border-bottom:0}
+  .pill{flex:none;font-size:10px;font-weight:700;border-radius:6px;padding:2px 7px;margin-top:1px}
+  .pill.require_validation{background:var(--amber-soft);color:#92400e}
+  .pill.deny{background:var(--coral-soft);color:#991b1b}
+  .pill.allow{background:var(--mint-soft);color:#065f46}
+  .apr .w{margin-left:auto;flex:none;font-size:10.5px;color:var(--faint)}
+  .apr .d{min-width:0}
+  .apr .d .ty{font-weight:650}
+  .apr .d .ds{color:var(--muted);font-size:11.5px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msg{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px;align-items:flex-start}
+  .msg:last-child{border-bottom:0}
+  .msg .ic{flex:none;width:26px;height:26px;border-radius:8px;background:var(--mint-soft);color:#065f46;
+    display:grid;place-items:center;font-size:12px;font-weight:800}
+  .msg .tx{line-height:1.45;min-width:0}
+  .msg .tx small{display:block;color:var(--faint);font-size:10.5px;margin-top:1px}
+  .note{font-size:11px;color:var(--faint);line-height:1.55;padding:14px 4px 0}
+
+  @media(max-width:1080px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:760px){.shell{grid-template-columns:1fr}.side{display:none}.main{padding:18px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="side" aria-label="Navigation">
+    <div class="logo"><b>H</b>ELYOS</div>
+    <a class="nav on" href="./board.html">🏠 Pilotage</a>
+    <a class="nav" href="./index.html">💬 Parler à HELYOS</a>
+    <h3>Holding</h3>
+    <a class="nav" href="#entreprises">🏢 Mes entreprises</a>
+    <a class="nav" href="#todo">✅ À faire <span class="b" id="nb-tasks">0</span></a>
+    <a class="nav" href="#gouv">🛡 Gouvernance <span class="b" id="nb-apr" hidden>0</span></a>
+    <h3>Système</h3>
+    <a class="nav" href="/docs">⚙️ API</a>
+    <a class="nav" href="https://github.com/Ninht-cmd/HELYOS">📦 Code source</a>
+    <h3>À venir</h3>
+    <div class="soon">📅 Calendrier <em>chantier</em></div>
+    <div class="soon">📊 Rapports <em>chantier</em></div>
+    <div class="soon">🔌 Intégrations <em>chantier</em></div>
+    <div class="foot">Local d'abord · gouvernance A0–A5 · chaque chiffre vient du noyau, rien n'est inventé.</div>
+  </nav>
+
+  <main class="main">
+    <div class="head">
+      <h1 id="greet">Bonjour.</h1>
+      <span class="st"><span class="dot" id="dot"></span><span id="state">connexion…</span></span>
+      <span class="sp"></span>
+      <a class="btn" href="./index.html">💬 Ouvrir le chat HELYOS</a>
+    </div>
+
+    <div class="kpis" style="margin-bottom:20px">
+      <div class="kpi"><div class="l">Chiffre d'affaires total</div>
+        <div class="v" id="k-ca">— <span class="u">€</span></div>
+        <div class="s" id="k-ca-s">réel, depuis le portefeuille</div></div>
+      <div class="kpi"><div class="l">Entreprises au portefeuille</div>
+        <div class="v" id="k-biz">—</div><div class="s" id="k-biz-s">&nbsp;</div></div>
+      <div class="kpi"><div class="l">Tâches ouvertes</div>
+        <div class="v" id="k-tasks">—</div><div class="s">humain + HELYOS</div></div>
+      <div class="kpi"><div class="l">Décisions gouvernées</div>
+        <div class="v" id="k-gov">—</div><div class="s" id="k-gov-s">depuis le démarrage du noyau</div></div>
+    </div>
+
+    <div class="grid">
+      <div class="col">
+        <section class="card" id="todo">
+          <h2>À faire — Plan Cash 90 jours <em>réel</em></h2>
+          <div class="bd" id="tasks"><div class="empty">chargement…</div></div>
+        </section>
+        <section class="card" id="entreprises">
+          <h2>Mes entreprises <em>réel</em></h2>
+          <div class="biz" id="biz"></div>
+        </section>
+      </div>
+      <div class="col">
+        <section class="card" id="gouv">
+          <h2>Gouvernance <em>réel</em></h2>
+          <div class="bd" id="apr"><div class="empty">aucune décision pour l'instant</div></div>
+        </section>
+        <section class="card">
+          <h2>Activité du noyau <em>réel</em></h2>
+          <div class="bd" id="msgs"><div class="empty">aucun événement pour l'instant</div></div>
+        </section>
+        <p class="note">Le CA restera à 0 € tant qu'aucun client n'a payé — c'est précisément l'objet
+        des 90 jours. Les validations se donnent dans le <a href="./index.html" style="color:var(--mint);font-weight:600">chat HELYOS</a> ;
+        aucune action externe ne part sans toi (GR-2/GR-7).</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const api = async (u, o) => { const r = await fetch(u, o); if (!r.ok) throw new Error(u+' → '+r.status); return r.json(); };
+const rel = ts => { const s = Math.max(0,(Date.now()/1000)-ts);
+  return s<60 ? Math.round(s)+' s' : s<3600 ? Math.round(s/60)+' min' : Math.round(s/3600)+' h'; };
+const EVENT_FR = {
+  'governance.decided':'Décision de gouvernance tracée', 'action.denied':'Action refusée par la gouvernance',
+  'action.pending_validation':'Action en attente de ta validation', 'invoice.drafted':'Relances de factures rédigées',
+  'scaffold.generated':'Squelette de business généré', 'portfolio.task_done':'Tâche du plan cochée',
+};
+const hr = new Date().getHours();
+$('#greet').textContent = (hr<6?'Bonne nuit':hr<18?'Bonjour':'Bonsoir') + ', Emeric.';
+
+function setOnline(ok){ $('#dot').classList.toggle('off',!ok);
+  $('#state').textContent = ok ? 'noyau local · gouvernance active' : 'noyau hors ligne'; }
+
+async function loadPortfolio(){
+  const biz = await api('/portfolio/detail');
+  // KPIs — additionne ce qui existe réellement, rien d'autre
+  const ca = biz.reduce((t,b)=>t + Number(b.metrics.revenue_eur ?? b.metrics.revenu_direct_eur ?? 0), 0);
+  $('#k-ca').innerHTML = `${ca.toLocaleString('fr-FR')} <span class="u">€</span>`;
+  $('#k-ca-s').textContent = ca === 0 ? 'objectif : 1er euro avant J30' : 'réel, depuis le portefeuille';
+  $('#k-biz').textContent = biz.length;
+  $('#k-biz-s').textContent = biz.filter(b=>/actif|prêt|construit|public|Plan Cash/i.test(b.status)).length + ' en préparation active';
+  const open = biz.flatMap(b=>b.tasks.filter(t=>!t.done));
+  $('#k-tasks').textContent = open.length;
+  $('#nb-tasks').textContent = open.length;
+
+  // À faire : tâches réelles, cochables
+  $('#tasks').innerHTML = open.length ? biz.flatMap(b =>
+    b.tasks.filter(t=>!t.done).map(t => {
+      const owner = /helyos/i.test(t.owner||'') ? 'helyos' : 'humain';
+      const label = esc(t.task.replace(/^\[(HUMAIN|HELYOS|GOUVERNÉ[^\]]*)\]\s*/i,''));
+      return `<div class="task">
+        <input type="checkbox" aria-label="Marquer comme faite : ${label}"
+               onchange="doneTask('${esc(b.name).replace(/'/g,"\\'")}','${esc(t.task.slice(0,30)).replace(/'/g,"\\'")}',this)">
+        <div><div class="t">${label}</div><div class="m">${esc(b.name)}</div></div>
+        <span class="own ${owner}">${owner==='helyos'?'HELYOS':'TOI'}</span>
+      </div>`;})
+  ).join('') : '<div class="empty">tout est fait — le silence signifie que tout fonctionne.</div>';
+
+  // Cartes entreprises
+  $('#biz').innerHTML = biz.map(b => {
+    const rev = Number(b.metrics.revenue_eur ?? b.metrics.revenu_direct_eur ?? 0);
+    return `<div class="bz">
+      <div class="n" title="${esc(b.name)}">${esc(b.name)}</div>
+      <div class="k">${esc(b.kind)}</div>
+      <div class="stt">${esc(b.status)}</div>
+      <div class="row"><span class="ca">CA : ${rev.toLocaleString('fr-FR')} €</span>
+        <span class="tg">${Number(b.open_tasks)||0} tâche(s)</span></div>
+    </div>`;
+  }).join('') + `<a class="bz new" href="./index.html">
+    <span class="plus">＋</span><b>Nouvelle entreprise</b>
+    <span>dis « crée un business… »<br>dans le chat</span></a>`;
+}
+
+async function loadGov(){
+  const entries = await api('/governance/audit?limit=6');
+  $('#k-gov').textContent = entries.length ? entries.length + (entries.length >= 6 ? '+' : '') : '0';
+  const pend = entries.filter(e=>e.decision==='require_validation').length;
+  $('#nb-apr').hidden = pend === 0; $('#nb-apr').textContent = pend;
+  if (entries.length)
+    $('#apr').innerHTML = entries.slice().reverse().map(e=>`
+      <div class="apr">
+        <span class="pill ${esc(e.decision)}">${esc(e.decision==='require_validation'?'à valider':e.decision==='deny'?'refusé':'autorisé')}</span>
+        <div class="d"><div class="ty">${esc(e.action_type)}${e.rule?' · '+esc(e.rule):''}</div>
+        <div class="ds">${esc(e.action_description||'')}</div></div>
+        <span class="w">il y a ${rel(e.ts)}</span>
+      </div>`).join('');
+  else $('#apr').innerHTML = '<div class="empty">aucune décision pour l\'instant — demande une action dans le chat.</div>';
+}
+
+async function loadEvents(){
+  const ev = await api('/events?limit=6');
+  if (ev.length)
+    $('#msgs').innerHTML = ev.slice().reverse().map(e=>`
+      <div class="msg"><span class="ic">H</span>
+        <div class="tx">${esc(EVENT_FR[e.name]||e.name)}<small>il y a ${rel(e.ts)}</small></div>
+      </div>`).join('');
+}
+
+async function doneTask(business, prefix, box){
+  box.disabled = true;
+  try {
+    await api('/portfolio/complete-task', { method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify({ business, task_prefix: prefix }) });
+    await refresh();
+  } catch (e) { box.checked = false; box.disabled = false; alert('Le noyau n\'a pas pu pointer la tâche : '+e.message); }
+}
+
+async function refresh(){
+  try { await Promise.all([loadPortfolio(), loadGov(), loadEvents()]); setOnline(true); }
+  catch (e) { setOnline(false); }
+}
+refresh();
+setInterval(()=>{ if (document.visibilityState==='visible') refresh(); }, 8000);
+</script>
+</body>
+</html>
