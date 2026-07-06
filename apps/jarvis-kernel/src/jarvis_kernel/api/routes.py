@@ -20,12 +20,14 @@ from .schemas import (
     AgentInfo,
     AuditEntryResponse,
     BusinessDetail,
+    ConnectorStatusResponse,
     HealthResponse,
     IntentRequest,
     JarvisReplyResponse,
     JarvisRequest,
     LevelInfo,
     PortfolioItem,
+    SyncResultResponse,
     TaskCompleteRequest,
     VerdictResponse,
 )
@@ -146,6 +148,41 @@ def portfolio_detail(request: Request) -> list[BusinessDetail]:
                        open_tasks=b.open_tasks, tasks=b.tasks)
         for b in ctx.portfolio.list()
     ]
+
+
+@router.get("/connectors", response_model=list[ConnectorStatusResponse], tags=["connectors"])
+def connectors(request: Request) -> list[ConnectorStatusResponse]:
+    """La carte honnête : connecté / à connecter (+ quoi fournir) / interdit (+ pourquoi)."""
+    return [ConnectorStatusResponse(**c.status().to_dict())
+            for c in (_ctx(request).connectors or [])]
+
+
+@router.post("/connectors/sync", response_model=SyncResultResponse, tags=["connectors"])
+def connectors_sync(request: Request) -> SyncResultResponse:
+    """Synchronise les métriques réelles (LECTURE seule) — action gouvernée A1."""
+    ctx = _ctx(request)
+    verdict = ctx.governance.submit(
+        Action(type=ActionType.ANALYZE, actor="connectors",
+               description="Synchroniser les connecteurs (lecture seule -> portefeuille)"),
+        AutonomyLevel.A1,
+    )
+    results: list[dict] = []
+    if verdict.allowed:
+        for c in (ctx.connectors or []):
+            if getattr(c, "sync", None) is None:
+                continue
+            st = c.status()
+            if st.status != "connected":
+                results.append({"name": c.name, "ok": False, "detail": st.status})
+                continue
+            try:
+                summary = c.sync(ctx.portfolio)
+                results.append({"name": c.name, "ok": summary is not None,
+                                "detail": summary or {}})
+                ctx.bus.emit("connector.synced", connector=c.name)
+            except Exception as exc:  # un connecteur qui tombe ne casse pas les autres
+                results.append({"name": c.name, "ok": False, "detail": str(exc)[:200]})
+    return SyncResultResponse(decision=verdict.decision.value, results=results)
 
 
 @router.post("/portfolio/complete-task", response_model=BusinessDetail, tags=["business"])

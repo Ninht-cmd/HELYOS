@@ -112,6 +112,33 @@ class TestApi(unittest.TestCase):
         names = [e["name"] for e in self.client.get("/events?limit=20").json()]
         self.assertIn("portfolio.task_done", names)
 
+    def test_connectors_map_is_honest(self):
+        r = self.client.get("/connectors")
+        self.assertEqual(r.status_code, 200)
+        by_name = {c["name"]: c for c in r.json()}
+        self.assertEqual(by_name["tradingview"]["status"], "forbidden")
+        self.assertIn("ADR-0010", by_name["tradingview"]["detail"])
+        # non configuré => le statut le dit et liste ce qu'il faut fournir
+        if by_name["shopify"]["status"] == "not_configured":
+            self.assertIn("HELYOS_SHOPIFY", by_name["shopify"]["requires"])
+
+    def test_connectors_sync_is_governed_and_survives_unconfigured(self):
+        # hermétique : le transport GitHub est remplacé (aucun réseau en test)
+        ctx = self.client.app.state.kernel
+        gh = next(c for c in ctx.connectors if c.name == "github")
+        gh.transport = lambda u, h: {"stargazers_count": 4, "forks_count": 1}
+
+        r = self.client.post("/connectors/sync")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertEqual(body["decision"], "allow")  # lecture A1 : autorisée et tracée
+        by_name = {res["name"]: res for res in body["results"]}
+        self.assertFalse(by_name["shopify"]["ok"])   # pas configuré -> pas de mensonge
+        self.assertTrue(by_name["github"]["ok"])     # public -> métriques réelles
+        folio = {b["name"]: b for b in self.client.get("/portfolio").json()}
+        os_biz = next(v for k, v in folio.items() if "open-source" in k)
+        self.assertEqual(os_biz["metrics"]["stars"], 4)
+
     def test_complete_task_unknown_business_404(self):
         r = self.client.post("/portfolio/complete-task", json={
             "business": "N'existe pas", "task_prefix": "peu importe",

@@ -110,3 +110,18 @@ class TaskCompleteRequest(BaseModel):
 
     business: str = Field(..., min_length=1, examples=["HELYOS Services (automatisation admin)"])
     task_prefix: str = Field(..., min_length=3, examples=["[HUMAIN] Semaine 1"])
+
+
+class ConnectorStatusResponse(BaseModel):
+    """État honnête d'un connecteur : connected | not_configured | forbidden | error."""
+
+    name: str
+    kind: str
+    status: str
+    detail: str = ""
+    requires: str = ""
+
+
+class SyncResultResponse(BaseModel):
+    decision: str
+    results: list[dict]

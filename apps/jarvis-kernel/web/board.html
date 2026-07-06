@@ -98,6 +98,16 @@
   .pill.require_validation{background:var(--amber-soft);color:#92400e}
   .pill.deny{background:var(--coral-soft);color:#991b1b}
   .pill.allow{background:var(--mint-soft);color:#065f46}
+  .pill.connected{background:var(--mint-soft);color:#065f46}
+  .pill.not_configured{background:#f3f4f6;color:#6b7280}
+  .pill.forbidden,.pill.error{background:var(--coral-soft);color:#991b1b}
+  .cx{padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .cx:last-child{border-bottom:0}
+  .cx .l1{display:flex;align-items:center;gap:8px}
+  .cx .l1 b{font-weight:650}
+  .cx .l1 .pill{margin-left:auto}
+  .cx .ds{color:var(--muted);font-size:11.5px;margin-top:2px;line-height:1.45}
+  .cx .rq{color:#92400e;font-size:11px;margin-top:2px;font-family:ui-monospace,Consolas,monospace}
   .apr .w{margin-left:auto;flex:none;font-size:10.5px;color:var(--faint)}
   .apr .d{min-width:0}
   .apr .d .ty{font-weight:650}
@@ -127,10 +137,10 @@
     <h3>Système</h3>
     <a class="nav" href="/docs">⚙️ API</a>
     <a class="nav" href="https://github.com/Ninht-cmd/HELYOS">📦 Code source</a>
+    <a class="nav" href="#integ">🔌 Intégrations</a>
     <h3>À venir</h3>
     <div class="soon">📅 Calendrier <em>chantier</em></div>
     <div class="soon">📊 Rapports <em>chantier</em></div>
-    <div class="soon">🔌 Intégrations <em>chantier</em></div>
     <div class="foot">Local d'abord · gouvernance A0–A5 · chaque chiffre vient du noyau, rien n'est inventé.</div>
   </nav>
 
@@ -169,6 +179,12 @@
         <section class="card" id="gouv">
           <h2>Gouvernance <em>réel</em></h2>
           <div class="bd" id="apr"><div class="empty">aucune décision pour l'instant</div></div>
+        </section>
+        <section class="card" id="integ">
+          <h2>Intégrations <em>réel</em>
+            <button class="btn ghost" id="syncbtn" style="margin-left:auto;padding:6px 12px;font-size:12px"
+                    onclick="syncNow()">⟳ Synchroniser</button></h2>
+          <div class="bd" id="cx"><div class="empty">chargement…</div></div>
         </section>
         <section class="card">
           <h2>Activité du noyau <em>réel</em></h2>
@@ -265,6 +281,29 @@ async function loadEvents(){
       </div>`).join('');
 }
 
+const CX_LABEL = { connected:'connecté', not_configured:'à connecter', forbidden:'interdit', error:'erreur' };
+async function loadConnectors(){
+  const cx = await api('/connectors');
+  $('#cx').innerHTML = cx.map(c=>`
+    <div class="cx">
+      <div class="l1"><b>${esc(c.name)}</b><span style="color:var(--faint);font-size:11px">${esc(c.kind)}</span>
+        <span class="pill ${esc(c.status)}">${esc(CX_LABEL[c.status]||c.status)}</span></div>
+      ${c.detail ? `<div class="ds">${esc(c.detail)}</div>` : ''}
+      ${c.requires ? `<div class="rq">requiert : ${esc(c.requires)}</div>` : ''}
+    </div>`).join('');
+}
+
+async function syncNow(){
+  const btn = $('#syncbtn'); btn.disabled = true; btn.textContent = '⟳ en cours…';
+  try {
+    const r = await api('/connectors/sync', { method:'POST' });
+    const ok = r.results.filter(x=>x.ok).map(x=>x.name);
+    btn.textContent = ok.length ? `✓ ${ok.join(', ')}` : '✓ rien à synchroniser';
+    await refresh();
+  } catch (e) { btn.textContent = '⚠ échec'; }
+  finally { setTimeout(()=>{ btn.disabled = false; btn.textContent = '⟳ Synchroniser'; }, 2500); }
+}
+
 async function doneTask(business, prefix, box){
   box.disabled = true;
   try {
@@ -276,7 +315,7 @@ async function doneTask(business, prefix, box){
 }
 
 async function refresh(){
-  try { await Promise.all([loadPortfolio(), loadGov(), loadEvents()]); setOnline(true); }
+  try { await Promise.all([loadPortfolio(), loadGov(), loadEvents(), loadConnectors()]); setOnline(true); }
   catch (e) { setOnline(false); }
 }
 refresh();

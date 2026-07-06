@@ -38,6 +38,7 @@ class KernelContext:
     portfolio: BusinessPortfolio
     llm: LLMPort | None = None    # backend LLM partagé (Stub ou Ollama selon la config)
     jarvis: object | None = None  # instance Jarvis (câblée dans build_default_context)
+    connectors: list = None       # connecteurs vers le monde réel (RFC-0009), tous gouvernés
 
 
 def build_default_context(settings: Settings | None = None) -> KernelContext:
@@ -90,4 +91,7 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
     # câble l'instance après coup pour éviter l'import circulaire au chargement.
     from .jarvis import Jarvis
     ctx.jarvis = Jarvis(ctx, llm)
+
+    from .connectors import build_connectors
+    ctx.connectors = build_connectors(cfg)
     return ctx
