@@ -108,11 +108,14 @@ def seed_known_businesses(portfolio: BusinessPortfolio) -> list[str]:
                  metrics={"stars": 0, "revenu_direct_eur": 0},
                  tasks=[{"task": "[HUMAIN] Build-in-public quotidien sur X", "done": False, "owner": "humain"}]),
         Business(name="HELYOS Services (automatisation admin)", kind="service",
-                 status="v1 construit — agent 'relance de factures' opérationnel en démo",
-                 metrics={"revenue_eur": 0, "clients": 0, "agents_v1": 1},
-                 tasks=[{"task": "[HUMAIN] Valider la demande : montrer la démo à 3-5 artisans", "done": False, "owner": "humain"},
-                        {"task": "[HELYOS] Brancher l'envoi SMTP derrière la gouvernance (A2)", "done": False, "owner": "helyos"},
-                        {"task": "[HUMAIN] Décrocher le 1er client payant (niche étroite)", "done": False, "owner": "humain"}]),
+                 status="Plan Cash 90 j actif (RFC-0008) — objectif : 1er euro avant J30",
+                 metrics={"revenue_eur": 0, "clients": 0, "audits_flash_vendus": 0,
+                          "prospects_contactes": 0},
+                 tasks=[{"task": "[HUMAIN] Semaine 1 : choisir LA niche (décision définitive)", "done": False, "owner": "humain"},
+                        {"task": "[HUMAIN] Créer le lien de paiement Stripe (Audit Flash 490 €)", "done": False, "owner": "humain"},
+                        {"task": "[HELYOS] Rédiger offre 1 page + 3 séquences e-mails + script d'appel", "done": False, "owner": "helyos"},
+                        {"task": "[HUMAIN] Lister 50 prospects dans la niche", "done": False, "owner": "humain"},
+                        {"task": "[HUMAIN] Jalon J30 : 2 Audits Flash vendus (980 €)", "done": False, "owner": "humain"}]),
     ]
     for b in known:
         portfolio.register(b)

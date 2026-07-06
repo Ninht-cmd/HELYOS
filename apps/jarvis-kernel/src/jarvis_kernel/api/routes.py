@@ -21,7 +21,10 @@ from .schemas import (
     AuditEntryResponse,
     HealthResponse,
     IntentRequest,
+    JarvisReplyResponse,
+    JarvisRequest,
     LevelInfo,
+    PortfolioItem,
     VerdictResponse,
 )
 
@@ -30,6 +33,17 @@ router = APIRouter()
 
 def _ctx(request: Request) -> KernelContext:
     return request.app.state.kernel
+
+
+def _parse_level(raw: str | None, default: AutonomyLevel) -> AutonomyLevel:
+    """A0..A5 (ou 0..5) -> niveau. Valeur inconnue = 400, pas une rétrogradation silencieuse."""
+    if raw is None:
+        return default
+    key = raw.strip().upper().removeprefix("A")
+    if not (key.isdigit() and 0 <= int(key) <= 5):
+        raise HTTPException(status_code=400,
+                            detail=f"granted_level invalide : {raw!r}. Valeurs : A0..A5.")
+    return AutonomyLevel(int(key))
 
 
 @router.get("/health", response_model=HealthResponse, tags=["kernel"])
@@ -50,7 +64,7 @@ def levels() -> list[LevelInfo]:
 
 @router.get("/governance/audit", response_model=list[AuditEntryResponse], tags=["governance"])
 def audit(request: Request, limit: int = 20) -> list[AuditEntryResponse]:
-    entries = _ctx(request).governance.audit.tail(limit)
+    entries = _ctx(request).governance.audit.tail(max(1, min(limit, 500)))
     return [AuditEntryResponse(**e.to_dict()) for e in entries]
 
 
@@ -67,11 +81,7 @@ def submit_intent(request: Request, body: IntentRequest) -> VerdictResponse:
             detail=f"action_type invalide : {body.action_type!r}. Valeurs : {valid}",
         )
 
-    granted = (
-        AutonomyLevel.from_name(body.granted_level)
-        if body.granted_level
-        else ctx.settings.default_autonomy
-    )
+    granted = _parse_level(body.granted_level, ctx.settings.default_autonomy)
 
     action = Action(
         type=action_type,
@@ -97,5 +107,29 @@ def submit_intent(request: Request, body: IntentRequest) -> VerdictResponse:
 
 @router.get("/events", tags=["kernel"])
 def events(request: Request, limit: int = 50) -> list[dict]:
-    history = _ctx(request).bus.history[-limit:]
+    history = _ctx(request).bus.history[-max(1, min(limit, 500)):]
     return [{"name": e.name, "ts": e.ts, "payload": e.payload} for e in history]
+
+
+@router.post("/jarvis", response_model=JarvisReplyResponse, tags=["jarvis"])
+def talk_to_jarvis(request: Request, body: JarvisRequest) -> JarvisReplyResponse:
+    """Point d'entrée unifié : langage naturel -> intention -> action gouvernée -> réponse."""
+    ctx = _ctx(request)
+    if ctx.jarvis is None:
+        raise HTTPException(status_code=503, detail="Jarvis non initialisé.")
+
+    granted = _parse_level(body.granted_level, ctx.settings.default_autonomy)
+    reply = ctx.jarvis.handle(body.message, granted=granted)
+    return JarvisReplyResponse(
+        intent=reply.intent,
+        text=reply.text,
+        governed=reply.governed,
+        decision=reply.decision,
+        rule=reply.rule,
+    )
+
+
+@router.get("/portfolio", response_model=list[PortfolioItem], tags=["business"])
+def portfolio(request: Request) -> list[PortfolioItem]:
+    """État réel du portefeuille de business — la source est la mémoire du Kernel."""
+    return [PortfolioItem(**b) for b in _ctx(request).portfolio.summary()]

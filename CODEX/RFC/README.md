@@ -26,5 +26,7 @@ Draft  →  In Review  →  Accepted  →  (donne lieu à ADR / implémentation)
 | [0004](RFC-0004-orchestration-agents.md) | Orchestration d'agents composés (sous gouvernance) | Accepted |
 | [0005](RFC-0005-business-scaffolder.md) | BusinessScaffolder — « HELYOS crée des business » (gouverné, honnête) | Accepted |
 | [0006](RFC-0006-helyos-v1-relance-factures.md) | HELYOS v1 — agent de relance de factures (1ʳᵉ tâche payante) | Accepted |
+| [0007](RFC-0007-jarvis-couche-conversationnelle.md) | Jarvis — couche conversationnelle unifiée + interface honnête | Accepted |
+| [0008](RFC-0008-plan-cash-90-jours.md) | Plan Cash 90 jours & réconciliation des documents fondateurs | Accepted |
 
 Gabarit : [`_template.md`](_template.md).

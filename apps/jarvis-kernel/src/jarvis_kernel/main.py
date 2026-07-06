@@ -28,6 +28,13 @@ def create_app():
     from .api.routes import router
 
     ctx = build_default_context()
+
+    # Le serveur expose l'état réel du portefeuille ; on l'amorce une seule fois
+    # (les statuts amorcés sont honnêtes : revenus à 0, tâches humaines bloquantes).
+    if not ctx.portfolio.list():
+        from .business.portfolio import seed_known_businesses
+        seed_known_businesses(ctx.portfolio)
+
     app = FastAPI(
         title=ctx.settings.app_name,
         version=ctx.settings.version,

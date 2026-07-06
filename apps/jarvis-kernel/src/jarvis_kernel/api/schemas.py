@@ -69,3 +69,31 @@ class LevelInfo(BaseModel):
     level: str
     rank: int
     label: str
+
+
+class JarvisRequest(BaseModel):
+    """Message en langage naturel adressé à HELYOS (point d'entrée unifié)."""
+
+    message: str = Field(..., min_length=1, examples=["où en sont mes business ?"])
+    granted_level: str | None = Field(
+        None, description="A0..A5 accordé pour ce tour. Défaut : niveau du Kernel.",
+        examples=["A1"],
+    )
+
+
+class JarvisReplyResponse(BaseModel):
+    intent: str
+    text: str
+    governed: bool
+    decision: str | None = None
+    rule: str | None = None
+
+
+class PortfolioItem(BaseModel):
+    """État réel d'un business géré — aucune métrique inventée."""
+
+    name: str
+    kind: str
+    status: str
+    metrics: dict
+    open_tasks: int

@@ -26,3 +26,7 @@ Thumbs.db
 /data/
 *.sqlite
 *.db
+
+# Artefacts locaux
+.coverage
+.claude/

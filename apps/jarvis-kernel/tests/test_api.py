@@ -60,6 +60,53 @@ class TestApi(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertGreaterEqual(len(r.json()), 1)
 
+    def test_jarvis_routes_portfolio_question(self):
+        r = self.client.post("/jarvis", json={"message": "où en sont mes business ?"})
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertEqual(body["intent"], "portefeuille")
+        self.assertIn("HELYOS Services", body["text"])
+
+    def test_jarvis_dangerous_action_is_governed(self):
+        r = self.client.post("/jarvis", json={
+            "message": "supprime toute la base clients", "granted_level": "A5",
+        })
+        body = r.json()
+        self.assertEqual(body["intent"], "action_dangereuse")
+        self.assertTrue(body["governed"])
+        self.assertEqual(body["decision"], "deny")
+        self.assertEqual(body["rule"], "GR-1")
+
+    def test_jarvis_rejects_empty_message(self):
+        r = self.client.post("/jarvis", json={"message": ""})
+        self.assertEqual(r.status_code, 422)  # min_length=1 (validation Pydantic)
+
+    def test_jarvis_rejects_invalid_granted_level(self):
+        # un niveau inconnu = 400 explicite, pas une rétrogradation silencieuse en A1
+        r = self.client.post("/jarvis", json={"message": "bonjour", "granted_level": "A9"})
+        self.assertEqual(r.status_code, 400)
+        r = self.client.post("/intent", json={"action_type": "read", "granted_level": "banane"})
+        self.assertEqual(r.status_code, 400)
+
+    def test_events_limit_zero_does_not_dump_everything(self):
+        # le piège history[-0:] : limit=0 doit renvoyer au plus 1 entrée, pas tout
+        self.client.post("/intent", json={"action_type": "read", "granted_level": "A0"})
+        self.client.post("/intent", json={"action_type": "read", "granted_level": "A0"})
+        r = self.client.get("/events?limit=0")
+        self.assertLessEqual(len(r.json()), 1)
+        r = self.client.get("/governance/audit?limit=0")
+        self.assertLessEqual(len(r.json()), 1)
+
+    def test_portfolio_returns_real_state_no_invented_metrics(self):
+        r = self.client.get("/portfolio")
+        self.assertEqual(r.status_code, 200)
+        items = r.json()
+        self.assertGreaterEqual(len(items), 4)
+        by_name = {i["name"]: i for i in items}
+        helyos = by_name["HELYOS Services (automatisation admin)"]
+        # honnêteté : les revenus amorcés sont à 0, pas des pourcentages inventés
+        self.assertEqual(helyos["metrics"]["revenue_eur"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

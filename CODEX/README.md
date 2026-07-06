@@ -11,7 +11,7 @@ Ce Codex est **vivant** et **versionné**. Il grandit par accumulation de décis
 
 | # | Section | Contenu |
 |---|---------|---------|
-| 00 | [Vision](00_VISION/00_Vision.md) · [Mission](00_VISION/01_Mission.md) · [Manifeste](00_VISION/02_Manifeste.md) | Le *pourquoi* et le cap long terme |
+| 00 | [Vision](00_VISION/00_Vision.md) · [Mission](00_VISION/01_Mission.md) · [Manifeste](00_VISION/02_Manifeste.md) · [Constitution 2050](00_VISION/03_Manifeste_2050.md) · [Prompt Fondateur](00_VISION/04_Prompt_Fondateur.md) | Le *pourquoi* et le cap long terme |
 | 01 | [ADN](01_ADN/00_ADN.md) | Les 16 principes fondateurs, non négociables |
 | 02 | [Architecture](02_ARCHITECTURE/00_Overview.md) | Modèle C4 : contexte → conteneurs → composants |
 | 03 | [Gouvernance](03_GOUVERNANCE/00_Autonomie_A0_A5.md) | Autonomie graduée **A0–A5** + [règles d'or](03_GOUVERNANCE/01_Regles_Or.md) |
