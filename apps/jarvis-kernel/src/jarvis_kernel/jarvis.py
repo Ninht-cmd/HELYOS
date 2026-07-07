@@ -25,7 +25,7 @@ from .observability.tracing import span
 
 # Intentions reconnues. La classification renvoie l'une de ces étiquettes.
 INTENTS = ("portefeuille", "relance_factures", "creer_business", "recherche",
-           "action_dangereuse", "conversation")
+           "marche_financier", "action_dangereuse", "conversation")
 
 # Filet déterministe (marche sans LLM). Motifs verbe/sujet, pas simples mots-clés.
 # ORDRE VOLONTAIRE : les actions dangereuses sont testées EN PREMIER — « supprime mes
@@ -33,10 +33,12 @@ INTENTS = ("portefeuille", "relance_factures", "creer_business", "recherche",
 _RULES: list[tuple[str, str]] = [
     # « paie(?!ment) » : « paie la facture » = financier, mais « paiement en retard »
     # appartient au flux factures — sinon la relance serait détournée vers la gouvernance.
-    ("action_dangereuse", r"supprim|efface|d[ée]truis|vire?ment|paie(?!ment)|transf[eè]re|donne.{0,10}droit|permission|privil[eè]g"),
+    ("action_dangereuse", r"supprim|efface|d[ée]truis|vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te|vends|investis|donne.{0,10}droit|permission|privil[eè]g"),
     ("portefeuille", r"portefeuille|mes business|mes affaires|o[uù] en (est|sont)|statut|tableau de bord|r[ée]capitulatif"),
     ("relance_factures", r"factur|relance|impay|client.{0,10}doit|paiement.{0,15}retard|retard.{0,15}paiement"),
     ("creer_business", r"cr[ée]e.{0,15}business|nouvelle boutique|lance.{0,15}(business|boutique)|scaffold"),
+    # « marché » seul reste une étude de marché (recherche) ; la finance exige son lexique.
+    ("marche_financier", r"bourse|crypto|bitcoin|\bbtc\b|ethereum|\beth\b|solana|trading|cours d[eu]|march[ée].{0,12}(financ|boursier)"),
     ("recherche", r"recherche|analyse|r[ée]sume|[ée]tudie|veille|renseigne"),
 ]
 
@@ -107,6 +109,8 @@ class Jarvis:
                 return self._business(message, granted)
             if intent == "recherche":
                 return self._research(message, granted)
+            if intent == "marche_financier":
+                return self._market(message, granted)
             if intent == "action_dangereuse":
                 return self._dangerous(message, granted)
             return self._talk(message)
@@ -158,10 +162,33 @@ class Jarvis:
                                True, v.decision.value, v.rule)
         return JarvisReply("recherche", finding, True, v.decision.value)
 
+    def _market(self, message: str, granted: AutonomyLevel) -> JarvisReply:
+        from .agents.market_analyst import DEFAULT_SYMBOLS, SYMBOLS, MarketAnalystAgent
+
+        m = message.lower()
+        wanted = tuple(dict.fromkeys(pair for word, pair in SYMBOLS.items() if word in m)) \
+            or DEFAULT_SYMBOLS
+        agent = MarketAnalystAgent()
+        try:
+            v, briefs = agent.analyze(self.ctx.governance, symbols=wanted, granted=granted)
+        except Exception:                     # réseau coupé : on le dit, on n'invente rien
+            return JarvisReply("marche_financier",
+                "Impossible de lire le marché (réseau ou API indisponible). "
+                "Je n'invente jamais un prix — réessaie plus tard.")
+        if not briefs:
+            return JarvisReply("marche_financier",
+                "Il me faut le niveau A1 pour analyser le marché.",
+                True, v.decision.value, v.rule)
+        txt = (agent.summary_text(briefs)
+               + "\n\nSi tu veux une proposition d'ordre, demande-la : elle exigera ta "
+                 "validation (GR-7) — et aucun courtier n'est branché, donc je prépare, "
+                 "tu exécutes.")
+        return JarvisReply("marche_financier", txt, True, v.decision.value)
+
     def _dangerous(self, message: str, granted: AutonomyLevel) -> JarvisReply:
         """Une demande d'action risquée : on la SOUMET à la gouvernance et on répond avec le verdict."""
         m = message.lower()
-        if re.search(r"vire?ment|paie|transf[eè]re", m):
+        if re.search(r"vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te|vends|investis", m):
             atype = ActionType.FINANCIAL
         elif re.search(r"droit|permission|privil[eè]g", m):
             atype = ActionType.SELF_PERMISSION

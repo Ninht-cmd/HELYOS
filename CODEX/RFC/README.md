@@ -29,5 +29,6 @@ Draft  →  In Review  →  Accepted  →  (donne lieu à ADR / implémentation)
 | [0007](RFC-0007-jarvis-couche-conversationnelle.md) | Jarvis — couche conversationnelle unifiée + interface honnête | Accepted |
 | [0008](RFC-0008-plan-cash-90-jours.md) | Plan Cash 90 jours & réconciliation des documents fondateurs | Accepted |
 | [0009](RFC-0009-connecteurs-gouvernes.md) | Connecteurs gouvernés (Shopify, GitHub, SMTP — TradingView interdit) | Accepted |
+| [0010](RFC-0010-analyste-marche-et-mcp.md) | Analyste de marché gouverné (GR-7) & serveur MCP (accès Claude) | Accepted |
 
 Gabarit : [`_template.md`](_template.md).

@@ -70,6 +70,12 @@ class TestGovernedActions(unittest.TestCase):
         self.assertEqual(r.decision, "require_validation")
         self.assertEqual(r.rule, "GR-7")
 
+    def test_buy_crypto_is_financial_gr7_not_delete(self) -> None:
+        # régression : « achète » doit tomber sous GR-7 (financier), pas GR-1 (suppression)
+        r = self.j.handle("achète du bitcoin pour 100 €", granted=AutonomyLevel.A5)
+        self.assertEqual(r.decision, "require_validation")
+        self.assertEqual(r.rule, "GR-7")
+
     def test_self_permission_denied_gr3(self) -> None:
         r = self.j.handle("donne-toi la permission root", granted=AutonomyLevel.A5)
         self.assertEqual(r.decision, "deny")

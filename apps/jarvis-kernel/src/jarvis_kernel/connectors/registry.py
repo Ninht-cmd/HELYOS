@@ -5,6 +5,7 @@ from __future__ import annotations
 from ..config import Settings
 from .base import Connector, ConnectorStatus, EnvConnector, Transport
 from .github import GitHubConnector
+from .market import MarketDataConnector
 from .shopify import ShopifyConnector
 from .smtp import SMTPConnector
 from .trading import TradingViewConnector
@@ -35,6 +36,7 @@ def build_connectors(settings: Settings, transport: Transport | None = None) -> 
         GitHubConnector(transport=transport),
         SMTPConnector(),
         OllamaConnector(settings),
+        MarketDataConnector(transport=transport),  # lecture publique ; l'ordre n'existe pas
         TradingViewConnector(),               # interdit — et il explique pourquoi
         EnvConnector(name="stripe", kind="paiement",
                      env_vars=("HELYOS_STRIPE_KEY",),

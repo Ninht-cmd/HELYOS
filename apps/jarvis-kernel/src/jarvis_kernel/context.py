@@ -76,6 +76,9 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
     registry.register(BusinessScaffolder(llm=llm))  # scaffolde un business (A1) ; publication = A2 gouvernée
     registry.register(InvoiceReminderAgent(llm=llm))  # HELYOS v1 : relance de factures (A1) ; envoi = A2 gouverné
 
+    from .agents.market_analyst import MarketAnalystAgent
+    registry.register(MarketAnalystAgent())  # analyse marché (A1) ; ordre = GR-7, jamais autonome
+
     ctx = KernelContext(
         settings=cfg,
         bus=bus,
