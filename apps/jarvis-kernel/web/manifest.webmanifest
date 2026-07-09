@@ -1,0 +1,15 @@
+{
+  "name": "HELYOS — Pilotage",
+  "short_name": "HELYOS",
+  "description": "Poste de pilotage de la holding HELYOS. Données réelles du noyau, gouvernance A0-A5.",
+  "start_url": "./board.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0e1726",
+  "theme_color": "#0e1726",
+  "lang": "fr",
+  "icons": [
+    { "src": "./icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

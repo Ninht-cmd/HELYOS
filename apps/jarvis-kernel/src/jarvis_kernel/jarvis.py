@@ -84,6 +84,8 @@ class Jarvis:
         prompt = (
             "Classe l'intention de ce message dans EXACTEMENT une de ces étiquettes "
             f"(réponds par le seul mot) : {', '.join(INTENTS)}.\n"
+            "Règle : une question de suivi, une question sur HELYOS lui-même, ou un message "
+            "trop vague pour être étudié = conversation (pas recherche).\n"
             f"Message : \"{message}\"\nÉtiquette :"
         )
         try:

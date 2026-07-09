@@ -46,7 +46,21 @@ class ResearchAgent(Agent):
             verdict = governance.submit(self.propose({"topic": topic}), granted)
             if verdict.decision is not Decision.ALLOW:
                 return verdict, None
-            finding = self.llm.complete(f"Analyse concise et structurée du sujet : {topic}")
+            # Prompt contraint : sans quoi un modèle 8B déroule son template
+            # « ### 1. Compréhension du sujet » même sur une question ambiguë —
+            # du vide verbeux constaté en réel dans le chat (2026-07-09).
+            from ..persona import FOUNDER_PROMPT
+
+            finding = self.llm.complete(
+                f"{FOUNDER_PROMPT}\n\n"
+                "Réponds à la demande ci-dessous en prose simple : pas de titres, pas de ###, "
+                "pas de gras, pas de liste, 120 mots maximum. Si la demande est ambiguë ou "
+                "renvoie à un contexte que tu n'as pas, dis-le en UNE phrase et pose UNE "
+                "question de clarification — n'analyse jamais la formulation de la question. "
+                "N'invente ni chiffre ni fait.\n\n"
+                f"Demande : {topic}\nRéponse :",
+                num_predict=220,
+            )
             if memory is not None:
                 memory.remember(topic, finding, namespace="research")
             governance.bus.emit("research.finding", topic=topic)
