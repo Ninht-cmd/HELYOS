@@ -25,7 +25,7 @@ from .governance.policy import Action, ActionType, Decision
 from .observability.tracing import span
 
 # Intentions reconnues. La classification renvoie l'une de ces étiquettes.
-INTENTS = ("portefeuille", "relance_factures", "creer_business", "recherche",
+INTENTS = ("portefeuille", "prospection", "relance_factures", "creer_business", "recherche",
            "marche_financier", "simulation_trading", "action_dangereuse", "conversation")
 
 # Filet déterministe (marche sans LLM). Motifs verbe/sujet, pas simples mots-clés.
@@ -36,6 +36,8 @@ _RULES: list[tuple[str, str]] = [
     # appartient au flux factures — sinon la relance serait détournée vers la gouvernance.
     ("action_dangereuse", r"supprim|efface|d[ée]truis|vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te|vends|investis|donne.{0,10}droit|permission|privil[eè]g"),
     ("portefeuille", r"portefeuille|mes business|mes affaires|o[uù] en (est|sont)|statut|tableau de bord|r[ée]capitulatif"),
+    # AVANT factures : « qui dois-je relancer » (prospects) ≠ « relance mes factures »
+    ("prospection", r"prospect|pipeline|d[ée]marchage|qui dois-je relancer"),
     ("relance_factures", r"factur|relance|impay|client.{0,10}doit|paiement.{0,15}retard|retard.{0,15}paiement"),
     ("creer_business", r"cr[ée]e.{0,15}business|nouvelle boutique|lance.{0,15}(business|boutique)|scaffold"),
     # la simulation (argent fictif) se distingue du marché réel et des ordres réels
@@ -123,6 +125,8 @@ class Jarvis:
             intent = self.classify(message)
             if intent == "portefeuille":
                 reply = self._portfolio()
+            elif intent == "prospection":
+                reply = self._prospection(message)
             elif intent == "relance_factures":
                 reply = self._invoices(granted)
             elif intent == "creer_business":
@@ -213,6 +217,37 @@ class Jarvis:
                  "validation (GR-7) — et aucun courtier n'est branché, donc je prépare, "
                  "tu exécutes.")
         return JarvisReply("marche_financier", txt, True, v.decision.value)
+
+    def _prospection(self, message: str) -> JarvisReply:
+        from .business.prospection import ProspectionPipeline
+
+        pipe = ProspectionPipeline(self.ctx.memory)
+        m = re.search(r"ajoute\s+(?:un\s+)?prospect\s*[:\-]\s*(.+)", message, re.IGNORECASE)
+        if m:
+            parts = [x.strip() for x in m.group(1).split(",")]
+            p = pipe.add(parts[0], company=parts[1] if len(parts) > 1 else "",
+                         contact=parts[2] if len(parts) > 2 else "")
+            draft = pipe.draft_outreach(self.llm, p)
+            return JarvisReply("prospection",
+                f"Prospect ajouté : {p.name}" + (f" ({p.company})" if p.company else "") +
+                f". Brouillon de premier contact :\n\n{draft}\n\n"
+                "Rien n'est envoyé : tu copies/adaptes, ou tu branches SMTP pour un envoi "
+                "gouverné (GR-2). Marque-le « contacté » quand c'est fait — je te rappellerai "
+                "la relance à J+3.")
+        s = pipe.stats()
+        if s["total"] == 0:
+            return JarvisReply("prospection",
+                "Pipeline vide. Dis-moi : « ajoute un prospect : Nom, Société, contact » — "
+                "je rédige le premier message. Objectif Plan Cash : 20 contacts/semaine.")
+        due = pipe.due_followups()
+        lines = [f"Pipeline : {s['total']} prospect(s) — {s['contactes']} contacté(s), "
+                 f"{s['reponses']} réponse(s), {s['clients']} client(s)."]
+        if due:
+            lines.append(f"À relancer maintenant ({len(due)}) : "
+                         + ", ".join(f"{p.name} ({next_s})" for p, next_s in due[:5]))
+        else:
+            lines.append("Aucune relance due — le rythme J+3/J+7 est tenu.")
+        return JarvisReply("prospection", "\n".join(lines))
 
     def _paper(self, granted: AutonomyLevel) -> JarvisReply:
         from .agents.paper_trader import PaperTrader

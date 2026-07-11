@@ -119,6 +119,17 @@ class Pulse:
         except Exception:                    # réseau coupé : silence, pas d'invention
             return []
 
+    def _watch_prospection(self) -> list[PulseItem]:
+        from .business.prospection import ProspectionPipeline
+
+        due = ProspectionPipeline(self.ctx.memory).due_followups()
+        if not due:
+            return []
+        names = ", ".join(p.name for p, _ in due[:4])
+        return [PulseItem("prospection",
+                          f"{len(due)} relance(s) de prospection à envoyer (J+3/J+7) : {names}.",
+                          urgent=True)]
+
     def _watch_paper(self) -> list[PulseItem]:
         w = self.ctx.memory.recall("wallet", namespace="paper_trading")
         if not w:
@@ -145,8 +156,8 @@ class Pulse:
             items: list[PulseItem] = []
             failures: list[str] = []
             for watcher in (self._watch_validations, self._watch_tasks,
-                            self._watch_market, self._watch_paper,
-                            self._watch_connectors):
+                            self._watch_prospection, self._watch_market,
+                            self._watch_paper, self._watch_connectors):
                 try:
                     items.extend(watcher())
                 except Exception:            # aucun veilleur ne tue le pouls…

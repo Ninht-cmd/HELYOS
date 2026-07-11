@@ -172,6 +172,47 @@ def jarvis_history(request: Request) -> list[HistoryEntry]:
     return [HistoryEntry(**e) for e in jarvis.history()]
 
 
+@router.get("/prospection", tags=["prospection"])
+def prospection(request: Request) -> dict:
+    """Pipeline de prospection réel : prospects, statuts, relances dues, stats vendredi."""
+    from ..business.prospection import ProspectionPipeline
+
+    pipe = ProspectionPipeline(_ctx(request).memory)
+    return {"stats": pipe.stats(),
+            "due": [{"name": p.name, "next": nxt} for p, nxt in pipe.due_followups()],
+            "prospects": [p.to_dict() for p in pipe.list()]}
+
+
+@router.post("/prospection", tags=["prospection"])
+def prospection_add(request: Request, body: dict) -> dict:
+    """Ajoute un prospect (name requis) et rend un brouillon de premier contact."""
+    from ..business.prospection import ProspectionPipeline
+
+    name = str(body.get("name", "")).strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="name requis")
+    ctx = _ctx(request)
+    pipe = ProspectionPipeline(ctx.memory)
+    p = pipe.add(name, company=str(body.get("company", "")),
+                 contact=str(body.get("contact", "")), note=str(body.get("note", "")))
+    return {"prospect": p.to_dict(), "draft": pipe.draft_outreach(ctx.llm, p)}
+
+
+@router.post("/prospection/status", tags=["prospection"])
+def prospection_status(request: Request, body: dict) -> dict:
+    """Change le statut d'un prospect (contacte, relance_1, repondu, rdv, client, perdu…)."""
+    from ..business.prospection import ProspectionPipeline
+
+    try:
+        p = ProspectionPipeline(_ctx(request).memory).set_status(
+            str(body.get("name", "")), str(body.get("status", "")))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return p.to_dict()
+
+
 @router.get("/paper", tags=["paper"])
 def paper_summary(request: Request) -> dict:
     """Portefeuille de trading SIMULÉ (argent fictif) — toujours étiqueté comme tel."""
