@@ -119,6 +119,14 @@ class Pulse:
         except Exception:                    # réseau coupé : silence, pas d'invention
             return []
 
+    def _watch_paper(self) -> list[PulseItem]:
+        w = self.ctx.memory.recall("wallet", namespace="paper_trading")
+        if not w:
+            return []                        # pas de simulation démarrée : silence
+        return [PulseItem("paper",
+                          f"Simulation trading (FICTIF) : {w.get('equity_eur', 0):.2f} € "
+                          f"({w.get('pnl_pct', 0):+.2f} %), {len(w.get('trades', []))} ordre(s) virtuels.")]
+
     def _watch_connectors(self) -> list[PulseItem]:
         try:
             waiting = [c.name for c in (self.ctx.connectors or [])
@@ -137,7 +145,8 @@ class Pulse:
             items: list[PulseItem] = []
             failures: list[str] = []
             for watcher in (self._watch_validations, self._watch_tasks,
-                            self._watch_market, self._watch_connectors):
+                            self._watch_market, self._watch_paper,
+                            self._watch_connectors):
                 try:
                     items.extend(watcher())
                 except Exception:            # aucun veilleur ne tue le pouls…

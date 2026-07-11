@@ -17,13 +17,14 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const INTENT_LABEL = {
   portefeuille: 'portefeuille', relance_factures: 'relance de factures',
   creer_business: 'création de business', recherche: 'recherche',
-  marche_financier: 'marché financier',
+  marche_financier: 'marché financier', simulation_trading: 'simulation (fictif)',
   action_dangereuse: 'action sensible', conversation: 'conversation',
 };
 // quelle capacité s'illumine pour chaque intention (mappe intention -> agent réel)
 const INTENT_AGENT = {
   relance_factures: 'invoice_reminder', creer_business: 'business_scaffolder',
   recherche: 'research', marche_financier: 'market_analyst',
+  simulation_trading: 'paper_trader',
 };
 const VERDICT = {
   allow: v => '✓ autorisé',
@@ -33,7 +34,7 @@ const VERDICT = {
 const CHIPS = [
   'Où en sont mes business ?',
   'Quel est le cours du bitcoin ?',
-  'Relance mes factures impayées',
+  'Lance la simulation de trading (fictif)',
   '🛡 Supprime un fichier obsolète',
   '🛡 Achète du bitcoin pour 100 €',
 ];

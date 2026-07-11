@@ -26,7 +26,7 @@ from .observability.tracing import span
 
 # Intentions reconnues. La classification renvoie l'une de ces étiquettes.
 INTENTS = ("portefeuille", "relance_factures", "creer_business", "recherche",
-           "marche_financier", "action_dangereuse", "conversation")
+           "marche_financier", "simulation_trading", "action_dangereuse", "conversation")
 
 # Filet déterministe (marche sans LLM). Motifs verbe/sujet, pas simples mots-clés.
 # ORDRE VOLONTAIRE : les actions dangereuses sont testées EN PREMIER — « supprime mes
@@ -38,6 +38,8 @@ _RULES: list[tuple[str, str]] = [
     ("portefeuille", r"portefeuille|mes business|mes affaires|o[uù] en (est|sont)|statut|tableau de bord|r[ée]capitulatif"),
     ("relance_factures", r"factur|relance|impay|client.{0,10}doit|paiement.{0,15}retard|retard.{0,15}paiement"),
     ("creer_business", r"cr[ée]e.{0,15}business|nouvelle boutique|lance.{0,15}(business|boutique)|scaffold"),
+    # la simulation (argent fictif) se distingue du marché réel et des ordres réels
+    ("simulation_trading", r"simul|fictif|virtuel|paper.?trad"),
     # « marché » seul reste une étude de marché (recherche) ; la finance exige son lexique.
     ("marche_financier", r"bourse|crypto|bitcoin|\bbtc\b|ethereum|\beth\b|solana|trading|cours d[eu]|march[ée].{0,12}(financ|boursier)"),
     ("recherche", r"recherche|analyse|r[ée]sume|[ée]tudie|veille|renseigne"),
@@ -129,6 +131,8 @@ class Jarvis:
                 reply = self._research(message, granted)
             elif intent == "marche_financier":
                 reply = self._market(message, granted)
+            elif intent == "simulation_trading":
+                reply = self._paper(granted)
             elif intent == "action_dangereuse":
                 reply = self._dangerous(message, granted)
             else:
@@ -209,6 +213,31 @@ class Jarvis:
                  "validation (GR-7) — et aucun courtier n'est branché, donc je prépare, "
                  "tu exécutes.")
         return JarvisReply("marche_financier", txt, True, v.decision.value)
+
+    def _paper(self, granted: AutonomyLevel) -> JarvisReply:
+        from .agents.paper_trader import PaperTrader
+
+        agent = PaperTrader()
+        try:
+            v, s = agent.step(self.ctx.governance, self.ctx.memory, granted=granted)
+        except Exception:
+            return JarvisReply("simulation_trading",
+                "Impossible de lire les prix (réseau/API indisponible) — la simulation "
+                "attend, je n'invente pas un cours.")
+        if s is None:
+            return JarvisReply("simulation_trading",
+                "Il me faut le niveau A1 pour faire tourner la simulation.",
+                True, v.decision.value, v.rule)
+        pos = ", ".join(f"{k} {float(q):.6f}" for k, q in s["positions"].items()) or "aucune"
+        text = (f"Simulation de trading — ARGENT FICTIF, prix réels :\n"
+                f"  • Capital virtuel : {s['equity_eur']:.2f} € ({s['pnl_pct']:+.2f} % "
+                f"depuis {s['start_eur']:.0f} €) · liquidités {s['cash_eur']:.2f} €\n"
+                f"  • Positions : {pos} · {s['executed']} ordre(s) virtuel(s) ce tour, "
+                f"{s['trades_count']} au total\n"
+                "Aucun euro réel n'est engagé. C'est le banc d'essai : si cette stratégie "
+                "ne bat pas le simple fait de garder l'argent, elle ne touchera jamais un "
+                "euro réel — et même prouvée, chaque ordre réel exigera ta validation (GR-7).")
+        return JarvisReply("simulation_trading", text, True, v.decision.value)
 
     def _dangerous(self, message: str, granted: AutonomyLevel) -> JarvisReply:
         """Une demande d'action risquée : on la SOUMET à la gouvernance et on répond avec le verdict."""

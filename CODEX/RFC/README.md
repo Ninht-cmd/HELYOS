@@ -32,5 +32,6 @@ Draft  →  In Review  →  Accepted  →  (donne lieu à ADR / implémentation)
 | [0010](RFC-0010-analyste-marche-et-mcp.md) | Analyste de marché gouverné (GR-7) & serveur MCP (accès Claude) | Accepted |
 | [0011](RFC-0011-pilotage-v2-acces-iphone.md) | Pilotage v2 (le beau + le vrai) & accès iPhone (PWA) | Accepted |
 | [0012](RFC-0012-le-vrai-jarvis.md) | Le vrai Jarvis : le Pouls (proactivité), la Voix, la Mémoire | Accepted |
+| [0013](RFC-0013-simulation-trading.md) | Trading en simulation — argent fictif, prix réels, P&L honnête | Accepted |
 
 Gabarit : [`_template.md`](_template.md).

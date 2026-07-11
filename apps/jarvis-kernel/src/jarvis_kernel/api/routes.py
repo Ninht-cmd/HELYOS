@@ -172,6 +172,29 @@ def jarvis_history(request: Request) -> list[HistoryEntry]:
     return [HistoryEntry(**e) for e in jarvis.history()]
 
 
+@router.get("/paper", tags=["paper"])
+def paper_summary(request: Request) -> dict:
+    """Portefeuille de trading SIMULÉ (argent fictif) — toujours étiqueté comme tel."""
+    from ..agents.paper_trader import PaperTrader
+
+    return PaperTrader().summary(_ctx(request).memory)
+
+
+@router.post("/paper/step", tags=["paper"])
+def paper_step(request: Request) -> dict:
+    """Un pas de stratégie simulée — gouverné (A1), aucun ordre réel possible."""
+    from ..agents.paper_trader import PaperTrader
+
+    ctx = _ctx(request)
+    try:
+        v, s = PaperTrader().step(ctx.governance, ctx.memory)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Prix indisponibles : {exc}") from exc
+    if s is None:
+        raise HTTPException(status_code=403, detail="Niveau A1 requis.")
+    return {"decision": v.decision.value, **s}
+
+
 @router.get("/connectors", response_model=list[ConnectorStatusResponse], tags=["connectors"])
 def connectors(request: Request) -> list[ConnectorStatusResponse]:
     """La carte honnête : connecté / à connecter (+ quoi fournir) / interdit (+ pourquoi)."""
