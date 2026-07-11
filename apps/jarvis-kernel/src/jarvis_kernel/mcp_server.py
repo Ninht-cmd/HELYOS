@@ -49,6 +49,10 @@ TOOLS: list[dict[str, Any]] = [
     {"name": "helyos_connectors",
      "description": "Carte des connecteurs : connecté / à connecter / interdit (et pourquoi).",
      "inputSchema": {"type": "object", "properties": {}}},
+    {"name": "helyos_briefing",
+     "description": ("Briefing proactif du Pouls : validations en attente, tâches humaines "
+                     "bloquantes, mouvements de marché, connecteurs. S'il n'y a rien, il le dit."),
+     "inputSchema": {"type": "object", "properties": {}}},
 ]
 
 
@@ -77,6 +81,10 @@ def call_tool(ctx: KernelContext, name: str, args: dict[str, Any]) -> dict[str, 
         return _text([e.to_dict() for e in ctx.governance.audit.tail(limit)])
     if name == "helyos_connectors":
         return _text([c.status().to_dict() for c in (ctx.connectors or [])])
+    if name == "helyos_briefing":
+        if ctx.pulse is None:
+            raise ValueError("Pouls indisponible")
+        return _text({"briefing": ctx.pulse.briefing()})
     raise ValueError(f"outil inconnu : {name}")
 
 

@@ -17,12 +17,13 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const INTENT_LABEL = {
   portefeuille: 'portefeuille', relance_factures: 'relance de factures',
   creer_business: 'création de business', recherche: 'recherche',
+  marche_financier: 'marché financier',
   action_dangereuse: 'action sensible', conversation: 'conversation',
 };
 // quelle capacité s'illumine pour chaque intention (mappe intention -> agent réel)
 const INTENT_AGENT = {
   relance_factures: 'invoice_reminder', creer_business: 'business_scaffolder',
-  recherche: 'research',
+  recherche: 'research', marche_financier: 'market_analyst',
 };
 const VERDICT = {
   allow: v => '✓ autorisé',
@@ -31,10 +32,10 @@ const VERDICT = {
 };
 const CHIPS = [
   'Où en sont mes business ?',
+  'Quel est le cours du bitcoin ?',
   'Relance mes factures impayées',
-  'Analyse le marché des posters IA',
   '🛡 Supprime un fichier obsolète',
-  '🛡 Fais un virement de 500 €',
+  '🛡 Achète du bitcoin pour 100 €',
 ];
 
 /* ---------------- éléments ---------------- */
@@ -51,6 +52,83 @@ document.querySelectorAll('.chip').forEach(c => c.onclick = () => {
 const hr = new Date().getHours();
 $('#greet').firstChild.textContent = (hr < 6 ? 'Bonne nuit ' : hr < 18 ? 'Bonjour ' : 'Bonsoir ');
 input.focus();
+
+/* ---------------- la voix d'HELYOS (synthèse locale du navigateur) ---------------- */
+// stockage protégé : localStorage peut lever (stockage bloqué, iframe sandbox) —
+// la préférence se perd alors, mais l'UI ne meurt pas.
+const lsGet = k => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+
+const voiceBtn = $('#voice');
+let voiceOn = lsGet('helyos_voice') !== 'off';   // parle par défaut — bascule persistée
+function renderVoiceBtn() {
+  voiceBtn.textContent = voiceOn ? '🔊' : '🔇';
+  voiceBtn.classList.toggle('off', !voiceOn);
+  voiceBtn.title = voiceOn ? 'HELYOS parle — cliquer pour couper' : 'Voix coupée — cliquer pour activer';
+}
+voiceBtn.onclick = () => {
+  voiceOn = !voiceOn;
+  lsSet('helyos_voice', voiceOn ? 'on' : 'off');
+  if (!voiceOn && 'speechSynthesis' in window) { speechSynthesis.cancel(); pendingSpeech = null; }
+  renderVoiceBtn();
+};
+renderVoiceBtn();
+
+let frVoice = null;
+function pickVoice() {
+  const vs = speechSynthesis.getVoices();
+  frVoice = vs.find(v => /^fr/i.test(v.lang) && /neural|natural|online|premium/i.test(v.name))
+         || vs.find(v => /^fr/i.test(v.lang)) || null;
+}
+if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+
+function utter(clean) {
+  speechSynthesis.cancel();                                     // une seule voix à la fois
+  const u = new SpeechSynthesisUtterance(clean);
+  u.lang = 'fr-FR'; if (frVoice) u.voice = frVoice;
+  u.rate = 1.05; u.pitch = 0.95;
+  speechSynthesis.speak(u);
+}
+
+let pendingSpeech = null;   // parole en attente du premier geste (politique autoplay)
+function speak(text) {
+  if (!voiceOn || !('speechSynthesis' in window)) return;
+  // flag /u : sans lui, 🛡 (hors BMP) casse la classe et mutile les autres emoji
+  const clean = String(text).replace(/[•⚠✓✕⏸→🛡\u{1F300}-\u{1FAFF}]/gu, '')
+    .replace(/\s+/g, ' ').trim().slice(0, 600);
+  if (!clean) return;
+  // Chrome/Safari bloquent la synthèse avant le premier geste utilisateur :
+  // on garde la phrase et on la dit au premier clic/touche au lieu d'échouer en silence.
+  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) {
+    pendingSpeech = clean;
+    return;
+  }
+  utter(clean);
+}
+for (const evt of ['pointerdown', 'keydown']) {
+  addEventListener(evt, () => {
+    if (pendingSpeech && voiceOn) { const s = pendingSpeech; pendingSpeech = null; utter(s); }
+  });
+}
+
+/* ---------------- l'oreille (reconnaissance du navigateur — audio traité par son service) --- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const micBtn = $('#mic');
+if (!SR) {
+  micBtn.hidden = true;                                         // pas supporté : on ne fait pas semblant
+} else {
+  const rec = new SR();
+  rec.lang = 'fr-FR'; rec.interimResults = false; rec.maxAlternatives = 1;
+  let listening = false;
+  rec.onresult = e => { input.value = e.results[0][0].transcript; send(); };
+  rec.onend = () => { listening = false; micBtn.classList.remove('rec'); };
+  rec.onerror = () => { listening = false; micBtn.classList.remove('rec'); };
+  micBtn.onclick = () => {
+    if (listening) { rec.stop(); return; }
+    if ('speechSynthesis' in window) speechSynthesis.cancel();  // il se tait quand tu parles
+    try { rec.start(); listening = true; micBtn.classList.add('rec'); } catch (_) {}
+  };
+}
 
 /* ---------------- état réel du noyau ---------------- */
 const rel = ts => {
@@ -132,6 +210,32 @@ async function refreshFolio() {
   } catch (_) { setOnline(false); }
 }
 
+/* Le Pouls parle en premier : au chargement, HELYOS te dit ce qui mérite ton
+   attention (ou dit explicitement que le silence signifie que tout fonctionne),
+   et le fil de conversation mémorisé est restauré — un Jarvis se souvient. */
+async function restoreAndBrief() {
+  let restored = 0;
+  try {
+    const hist = await api('/jarvis/history');
+    if (hist.length) {
+      document.body.classList.replace('home', 'chat');
+      hist.slice(-10).forEach(e => bubble(e.role === 'fondateur' ? 'u' : 'j', esc(e.text)));
+      restored = hist.length;
+    }
+  } catch (_) {}
+  try {
+    const br = await api('/pulse/briefing');
+    // décision sur l'état COURANT de l'UI : si l'utilisateur a déjà envoyé un
+    // message pendant le fetch, le hero est caché — le briefing va dans le fil.
+    if (document.body.classList.contains('chat')) {
+      bubble('j', `${esc(br.text)}<div class="meta"><span class="tag intent">pouls</span></div>`);
+    } else {
+      $('#brief').textContent = br.text;
+    }
+    if (br.items && br.items.length) speak(br.text);   // il ne parle que s'il y a à dire
+  } catch (_) {}
+}
+
 async function boot() {
   try {
     const h = await api('/health');
@@ -143,6 +247,7 @@ async function boot() {
   } catch (e) {
     setOnline(false);
   }
+  restoreAndBrief();
   refreshAudit(); refreshFlux(); refreshFolio();
   setInterval(() => {
     if (document.visibilityState === 'visible') { refreshAudit(); refreshFlux(); }
@@ -180,6 +285,7 @@ async function send() {
     if (r.governed && r.decision && VERDICT[r.decision])
       tags.push(`<span class="tag ${esc(r.decision)}">${esc(VERDICT[r.decision](r))}</span>`);
     b.innerHTML = `${esc(r.text)}<div class="meta">${tags.join('')}</div>`;
+    speak(r.text);                            // HELYOS répond aussi à voix haute
     const agent = INTENT_AGENT[r.intent];
     // l'agent ne « vient d'agir » que si la gouvernance a laissé passer
     if (agent && (!r.governed || r.decision === 'allow')) { agentActed(agent); spark(agent); }

@@ -125,3 +125,18 @@ class ConnectorStatusResponse(BaseModel):
 class SyncResultResponse(BaseModel):
     decision: str
     results: list[dict]
+
+
+class BriefingResponse(BaseModel):
+    """Le briefing du Pouls — décisions, anomalies, priorités. Rien d'inventé."""
+
+    text: str
+    items: list[dict]
+
+
+class HistoryEntry(BaseModel):
+    """Un tour de conversation mémorisé (rôle fondateur ou helyos)."""
+
+    role: str
+    text: str
+    intent: str | None = None

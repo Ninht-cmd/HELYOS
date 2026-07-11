@@ -35,9 +35,24 @@ def create_app():
         from .business.portfolio import seed_known_businesses
         seed_known_businesses(ctx.portfolio)
 
+    import os
+    from contextlib import asynccontextmanager
+
+    @asynccontextmanager
+    async def lifespan(app):
+        # Le Pouls : HELYOS observe en continu et parle en premier (RFC-0012).
+        # HELYOS_PULSE_INTERVAL=0 le désactive (tests, environnements contraints).
+        interval = float(os.environ.get("HELYOS_PULSE_INTERVAL", "60") or 0)
+        if ctx.pulse is not None and interval > 0:
+            ctx.pulse.start(interval_s=interval)
+        yield
+        if ctx.pulse is not None:
+            ctx.pulse.stop()
+
     app = FastAPI(
         title=ctx.settings.app_name,
         version=ctx.settings.version,
+        lifespan=lifespan,
         description=(
             "Kernel Jarvis — le cœur gouverné d'HELYOS. "
             "Source de vérité : le CODEX. Toute action passe par la gouvernance A0–A5."

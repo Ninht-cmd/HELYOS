@@ -12,6 +12,7 @@ et toute action sur le monde reste gouvernée (le refus fait partie de la répon
 from __future__ import annotations
 
 import re
+import threading
 from dataclasses import dataclass
 
 from .agents.business_scaffolder import BusinessScaffolder
@@ -58,6 +59,7 @@ class Jarvis:
     def __init__(self, ctx: KernelContext, llm: LLMPort | None = None) -> None:
         self.ctx = ctx
         self.llm = llm or StubLLM(prefix="[jarvis]")
+        self._mem_lock = threading.Lock()   # deux requêtes concurrentes ≠ un échange perdu
 
     # --- compréhension ---
     def classify(self, message: str) -> str:
@@ -99,23 +101,44 @@ class Jarvis:
                 return intent
         return ""
 
+    # --- mémoire de conversation (un Jarvis se souvient de ce qu'on s'est dit) ---
+    _THREAD_MAX = 24   # entrées conservées (12 échanges) — assez pour la continuité, pas un log
+
+    def history(self) -> list[dict]:
+        return list(self.ctx.memory.recall("thread", namespace="conversation") or [])
+
+    def _remember_exchange(self, message: str, reply: JarvisReply) -> None:
+        with self._mem_lock:                # lecture-ajout-écriture atomique
+            thread = self.history()
+            thread.append({"role": "fondateur", "text": message[:500], "intent": None})
+            thread.append({"role": "helyos", "text": reply.text[:800], "intent": reply.intent})
+            self.ctx.memory.remember("thread", thread[-self._THREAD_MAX:],
+                                     namespace="conversation")
+
     # --- action (sous gouvernance) ---
     def handle(self, message: str, granted: AutonomyLevel = AutonomyLevel.A1) -> JarvisReply:
         with span("jarvis.handle", **{"helyos.msg": message[:60]}):
             intent = self.classify(message)
             if intent == "portefeuille":
-                return self._portfolio()
-            if intent == "relance_factures":
-                return self._invoices(granted)
-            if intent == "creer_business":
-                return self._business(message, granted)
-            if intent == "recherche":
-                return self._research(message, granted)
-            if intent == "marche_financier":
-                return self._market(message, granted)
-            if intent == "action_dangereuse":
-                return self._dangerous(message, granted)
-            return self._talk(message)
+                reply = self._portfolio()
+            elif intent == "relance_factures":
+                reply = self._invoices(granted)
+            elif intent == "creer_business":
+                reply = self._business(message, granted)
+            elif intent == "recherche":
+                reply = self._research(message, granted)
+            elif intent == "marche_financier":
+                reply = self._market(message, granted)
+            elif intent == "action_dangereuse":
+                reply = self._dangerous(message, granted)
+            else:
+                reply = self._talk(message)
+            try:
+                self._remember_exchange(message, reply)
+            except Exception:      # la mémoire ne doit jamais casser la réponse…
+                from .observability.telemetry import get_logger
+                get_logger(__name__).warning("mémoire de conversation en échec")  # …ni se perdre en silence
+            return reply
 
     def _portfolio(self) -> JarvisReply:
         items = self.ctx.portfolio.summary()
@@ -209,9 +232,18 @@ class Jarvis:
     def _talk(self, message: str) -> JarvisReply:
         from .persona import FOUNDER_PROMPT
 
+        # continuité : les derniers échanges entrent dans le prompt (court : LLM local).
+        # Retours à la ligne aplatis : un texte mémorisé ne doit pas pouvoir se faire
+        # passer pour une nouvelle ligne d'instruction du prompt.
+        recent = self.history()[-6:]
+        memo = "".join(
+            f"\n{'Fondateur' if e['role'] == 'fondateur' else 'HELYOS'} : "
+            f"{e['text'][:200].replace(chr(10), ' ')}"
+            for e in recent)
+        context_block = f"\n\nDerniers échanges :{memo}" if memo else ""
         try:
             reply = self.llm.complete(
-                f"{FOUNDER_PROMPT}\n\nMessage du fondateur : \"{message}\"\nRéponse :").strip()
+                f"{FOUNDER_PROMPT}{context_block}\n\nMessage du fondateur : \"{message}\"\nRéponse :").strip()
         except Exception:                     # Ollama éteint / réseau : on reste debout
             reply = ""
         if not reply or "Tu es HELYOS" in reply:   # vide ou écho du StubLLM : repli honnête

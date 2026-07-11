@@ -112,6 +112,24 @@ class TestApi(unittest.TestCase):
         names = [e["name"] for e in self.client.get("/events?limit=20").json()]
         self.assertIn("portfolio.task_done", names)
 
+    def test_pulse_briefing_endpoint(self):
+        # hermétique : pas de lecture marché réelle pendant le test
+        ctx = self.client.app.state.kernel
+        ctx.connectors = [c for c in ctx.connectors if c.name != "market"]
+        r = self.client.get("/pulse/briefing")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertIn("text", body)
+        self.assertIsInstance(body["items"], list)
+
+    def test_jarvis_history_endpoint(self):
+        self.client.post("/jarvis", json={"message": "où en sont mes business ?"})
+        r = self.client.get("/jarvis/history")
+        self.assertEqual(r.status_code, 200)
+        hist = r.json()
+        self.assertGreaterEqual(len(hist), 2)
+        self.assertEqual(hist[-1]["role"], "helyos")
+
     def test_connectors_map_is_honest(self):
         r = self.client.get("/connectors")
         self.assertEqual(r.status_code, 200)

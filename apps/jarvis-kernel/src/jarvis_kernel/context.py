@@ -39,6 +39,7 @@ class KernelContext:
     llm: LLMPort | None = None    # backend LLM partagé (Stub ou Ollama selon la config)
     jarvis: object | None = None  # instance Jarvis (câblée dans build_default_context)
     connectors: list = None       # connecteurs vers le monde réel (RFC-0009), tous gouvernés
+    pulse: object | None = None   # le Pouls : observation continue + briefing (RFC-0012)
 
 
 def build_default_context(settings: Settings | None = None) -> KernelContext:
@@ -97,4 +98,7 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
 
     from .connectors import build_connectors
     ctx.connectors = build_connectors(cfg)
+
+    from .pulse import Pulse
+    ctx.pulse = Pulse(ctx)   # la boucle de fond n'est démarrée que par l'app (main.py)
     return ctx

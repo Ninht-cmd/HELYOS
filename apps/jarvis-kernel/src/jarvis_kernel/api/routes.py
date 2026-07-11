@@ -19,9 +19,11 @@ from ..governance.policy import Action, ActionType
 from .schemas import (
     AgentInfo,
     AuditEntryResponse,
+    BriefingResponse,
     BusinessDetail,
     ConnectorStatusResponse,
     HealthResponse,
+    HistoryEntry,
     IntentRequest,
     JarvisReplyResponse,
     JarvisRequest,
@@ -148,6 +150,26 @@ def portfolio_detail(request: Request) -> list[BusinessDetail]:
                        open_tasks=b.open_tasks, tasks=b.tasks)
         for b in ctx.portfolio.list()
     ]
+
+
+@router.get("/pulse/briefing", response_model=BriefingResponse, tags=["pulse"])
+def pulse_briefing(request: Request) -> BriefingResponse:
+    """Le briefing proactif : validations en attente, tâches humaines, marché, connecteurs.
+    S'il n'y a rien, il le dit — le silence signifie que tout fonctionne."""
+    pulse = _ctx(request).pulse
+    if pulse is None:
+        raise HTTPException(status_code=503, detail="Pouls indisponible.")
+    text, items = pulse.report()             # UN battement : texte et items cohérents
+    return BriefingResponse(text=text, items=[i.to_dict() for i in items])
+
+
+@router.get("/jarvis/history", response_model=list[HistoryEntry], tags=["jarvis"])
+def jarvis_history(request: Request) -> list[HistoryEntry]:
+    """Le fil de conversation mémorisé — un Jarvis se souvient."""
+    jarvis = _ctx(request).jarvis
+    if jarvis is None:
+        raise HTTPException(status_code=503, detail="Jarvis non initialisé.")
+    return [HistoryEntry(**e) for e in jarvis.history()]
 
 
 @router.get("/connectors", response_model=list[ConnectorStatusResponse], tags=["connectors"])

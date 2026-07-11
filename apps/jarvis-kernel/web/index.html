@@ -53,7 +53,10 @@
   /* ============ accueil ============ */
   .hero{position:fixed;left:50%;top:48%;transform:translate(-50%,-100%);z-index:4;
     width:min(760px,90vw);text-align:center;transition:opacity .6s var(--spring),transform .7s var(--spring)}
-  body.chat .hero{opacity:0;transform:translate(-50%,-140%);pointer-events:none}
+  /* visibility:hidden (avec délai le temps du fondu) : sinon les puces invisibles
+     restent focusables au clavier et peuvent envoyer un message caché */
+  body.chat .hero{opacity:0;transform:translate(-50%,-140%);pointer-events:none;
+    visibility:hidden;transition:opacity .5s,transform .5s,visibility 0s .5s}
   .greet{font-size:clamp(34px,5.6vw,60px);font-weight:200;line-height:1.06;
     background:linear-gradient(180deg,#fff,#a9b8cc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
     animation:rise .9s var(--spring) both}
@@ -88,6 +91,17 @@
     background:linear-gradient(160deg,var(--mint),#34c9a8);font-size:18px;transition:.3s var(--spring)}
   .composer .send:hover{filter:brightness(1.12);transform:scale(1.06)}
   .composer .send:disabled{opacity:.4;cursor:default;transform:none;filter:none}
+  .composer .mic{flex:none;width:42px;height:42px;border-radius:13px;border:0;cursor:pointer;
+    background:rgba(255,255,255,.06);color:var(--muted);font-size:16px;transition:.2s}
+  .composer .mic:hover{color:var(--ink);background:rgba(255,255,255,.12)}
+  .composer .mic.rec{background:rgba(255,99,99,.22);color:#ff9d9d;animation:recp 1s infinite}
+  @keyframes recp{50%{box-shadow:0 0 0 7px rgba(255,99,99,.10)}}
+  .iconbtn{background:none;border:0;cursor:pointer;color:var(--muted);font-size:15px;padding:2px 4px;transition:.2s}
+  .iconbtn:hover{color:var(--ink)}
+  .iconbtn.off{opacity:.4}
+  .hero .brief{margin:14px auto 0;max-width:600px;font-size:13px;color:var(--muted);
+    line-height:1.65;white-space:pre-line;text-align:left}
+  .hero .brief:empty{display:none}
 
   /* ============ fil de conversation ============ */
   .stream{position:fixed;inset:0;z-index:4;display:none;flex-direction:column;align-items:center;
@@ -181,12 +195,14 @@
         <option>A3</option><option>A4</option><option>A5</option>
       </select>
     </label>
+    <button id="voice" class="iconbtn" type="button" aria-label="Activer ou couper la voix d'HELYOS">🔊</button>
     <span id="ver">v—</span><a href="./board.html">pilotage</a><a href="/docs">API</a><a href="/info">info</a>
   </header>
 
   <section class="hero" id="hero">
     <h1 class="greet" id="greet">Bonjour <span class="nm">Emeric</span>.</h1>
     <p class="ask">Une intelligence, cinq capacités, chaque action gouvernée.</p>
+    <p class="brief" id="brief" aria-live="polite"></p>
     <div class="chips" id="chips" aria-label="Suggestions"></div>
   </section>
 
@@ -197,6 +213,7 @@
         <div class="pulse" aria-hidden="true"></div>
         <input id="q" autocomplete="off" aria-label="Parler à HELYOS"
                placeholder="Parle à HELYOS — il comprend, la gouvernance décide, il agit.">
+        <button class="mic" id="mic" type="button" aria-label="Dicter à la voix">🎙</button>
         <button class="send" id="send" type="submit" aria-label="Envoyer">↑</button>
       </form>
     </div>
@@ -213,7 +230,7 @@
     <section class="panel"><h2><span class="d" style="background:var(--amber)"></span>Portefeuille<em>réel</em></h2><div id="folio"><div class="empty">—</div></div></section>
   </aside>
 
-  <footer class="note">Local d'abord · chaque action passe par la gouvernance A0–A5 · les panneaux affichent l'état réel du noyau — aucune métrique inventée</footer>
+  <footer class="note">Local d'abord · chaque action passe par la gouvernance A0–A5 · l'état affiché est réel — rien d'inventé · 🎙 la dictée envoie ta voix au service vocal du navigateur (souvent un serveur distant)</footer>
 
   <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
   <script type="module" src="./app.js"></script>

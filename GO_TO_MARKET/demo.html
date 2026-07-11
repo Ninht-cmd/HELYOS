@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emeric — Workflows n8n + IA en marque blanche pour agences</title>
+<meta name="description" content="Vous vendez l'automatisation, je la construis. Workflows n8n + IA livrés en 7 jours sous votre marque. Premier workflow : 350 € fixe.">
+<style>
+  /* Noir & Or — l'esthétique de la marque, version HUD. Contrat d'honnêteté inchangé :
+     la démo est une SIMULATION étiquetée, zéro faux témoignage, zéro fausse rareté.
+     Le spectaculaire est dans le rendu, jamais dans les chiffres. */
+  :root{
+    --bg:#04050a; --bg2:#0a0c14; --ink:#ece7dc; --muted:#9a938a; --faint:#6b655d;
+    --gold:#d4af37; --gold-hi:#ffd166; --gold-soft:rgba(212,175,55,.12);
+    --line:rgba(212,175,55,.20); --line2:rgba(255,255,255,.07);
+    --mint:#00e5a0; --ok:rgba(0,229,160,.15);
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);line-height:1.6;overflow-x:hidden;
+    font-family:"Segoe UI",-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  ::selection{background:var(--gold);color:#000}
+  a{color:var(--gold-hi);text-decoration:none}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px;position:relative;z-index:2}
+
+  /* ---- fond 3D ---- */
+  #bg{position:fixed;inset:0;z-index:0;display:block}
+  .veil{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse 90% 60% at 50% 0%,transparent 30%,rgba(4,5,10,.72) 100%),
+               linear-gradient(180deg,rgba(4,5,10,.15),rgba(4,5,10,.65) 85%)}
+
+  /* révélations au scroll */
+  .rv{opacity:0;transform:translateY(26px);transition:opacity .8s cubic-bezier(.22,1,.36,1),
+    transform .8s cubic-bezier(.22,1,.36,1)}
+  .rv.in{opacity:1;transform:none}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:10;background:rgba(4,5,10,.78);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line2)}
+  nav .wrap{display:flex;align-items:center;gap:14px;padding:14px 22px}
+  .logo{font-family:var(--mono);font-weight:700;letter-spacing:3px;font-size:14px;color:var(--gold);
+    text-shadow:0 0 18px rgba(212,175,55,.45)}
+  nav .sp{flex:1}
+  .cta{display:inline-block;background:var(--gold);color:#0a0800;font-weight:700;font-size:13.5px;
+    padding:10px 18px;border-radius:8px;transition:.25s;border:1px solid var(--gold);
+    position:relative;overflow:hidden}
+  .cta:hover{background:var(--gold-hi);transform:translateY(-1px);
+    box-shadow:0 8px 30px rgba(212,175,55,.35)}
+  .cta::after{content:"";position:absolute;top:0;left:-80%;width:50%;height:100%;
+    background:linear-gradient(105deg,transparent,rgba(255,255,255,.55),transparent);
+    transform:skewX(-20deg);transition:left .6s ease}
+  .cta:hover::after{left:130%}
+  .cta.ghost{background:transparent;color:var(--gold-hi)}
+  .cta.ghost:hover{background:var(--gold-soft);box-shadow:0 8px 30px rgba(212,175,55,.15)}
+
+  /* hero */
+  .hero{padding:110px 0 80px;text-align:center;position:relative}
+  .tag{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:2.5px;
+    text-transform:uppercase;color:var(--gold);border:1px solid var(--line);border-radius:99px;
+    padding:6px 14px;margin-bottom:26px;background:rgba(4,5,10,.5);
+    animation:tagGlow 3.2s ease-in-out infinite}
+  @keyframes tagGlow{0%,100%{box-shadow:0 0 0 rgba(212,175,55,0)}
+    50%{box-shadow:0 0 24px rgba(212,175,55,.28)}}
+  h1{font-size:clamp(30px,5.6vw,56px);font-weight:800;letter-spacing:-.5px;line-height:1.1}
+  h1 em{font-style:normal;background:linear-gradient(100deg,var(--gold) 15%,#fff2c7 38%,var(--gold-hi) 52%,var(--gold) 80%);
+    background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:holo 5.5s linear infinite}
+  @keyframes holo{to{background-position:-220% 0}}
+  .sub{max-width:620px;margin:22px auto 0;color:var(--muted);font-size:17px}
+  .sub b{color:var(--ink)}
+  .hero .row{margin-top:36px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .scrolldn{margin:60px auto 0;width:22px;height:36px;border:1.5px solid var(--line);
+    border-radius:12px;position:relative;opacity:.7}
+  .scrolldn::before{content:"";position:absolute;top:7px;left:50%;width:3px;height:8px;
+    margin-left:-1.5px;border-radius:2px;background:var(--gold);animation:wheel 1.8s infinite}
+  @keyframes wheel{0%{transform:translateY(0);opacity:1}70%{transform:translateY(11px);opacity:0}
+    100%{opacity:0}}
+
+  /* sections */
+  section{padding:72px 0;border-top:1px solid var(--line2);position:relative;z-index:2}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;
+    color:var(--gold);margin-bottom:10px}
+  h2{font-size:clamp(22px,3.4vw,30px);font-weight:750;letter-spacing:-.3px;margin-bottom:12px}
+  .lead{color:var(--muted);max-width:640px}
+
+  /* démo */
+  .demo{background:rgba(10,12,20,.88);backdrop-filter:blur(6px);border:1px solid var(--line);
+    border-radius:16px;margin-top:30px;overflow:hidden;position:relative;
+    box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(212,175,55,.06)}
+  .demo::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px)}
+  .scan{position:absolute;left:0;right:0;top:-20%;height:90px;z-index:3;pointer-events:none;
+    background:linear-gradient(180deg,transparent,rgba(212,175,55,.055),transparent);
+    animation:scan 7s linear infinite}
+  @keyframes scan{to{top:120%}}
+  .demo .bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line2);
+    font-family:var(--mono);font-size:11.5px;color:var(--faint);position:relative;z-index:4}
+  .demo .bar .dots{display:flex;gap:5px}
+  .demo .bar .dots i{width:9px;height:9px;border-radius:50%;background:#2a2d36}
+  .demo .bar .dots i:first-child{background:rgba(212,175,55,.5)}
+  .demo .bar .sim{margin-left:auto;color:var(--gold);border:1px solid var(--line);border-radius:6px;
+    padding:2px 8px;letter-spacing:1px}
+  .demo .body{display:grid;grid-template-columns:300px 1fr;min-height:380px;position:relative;z-index:2}
+  @media(max-width:760px){.demo .body{grid-template-columns:1fr}}
+
+  .panel{padding:20px;border-right:1px solid var(--line2)}
+  @media(max-width:760px){.panel{border-right:0;border-bottom:1px solid var(--line2)}}
+  .panel label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--faint);margin:14px 0 5px}
+  .panel label:first-child{margin-top:0}
+  .panel input,.panel select{width:100%;background:#0d1018;border:1px solid var(--line2);color:var(--ink);
+    font:inherit;font-size:14px;padding:9px 11px;border-radius:8px;outline:none;transition:.25s}
+  .panel input:focus,.panel select:focus{border-color:var(--gold);
+    box-shadow:0 0 0 3px rgba(212,175,55,.12)}
+  .run{width:100%;margin-top:20px;background:var(--gold);border:0;color:#0a0800;font:inherit;
+    font-weight:800;font-size:14px;padding:12px;border-radius:9px;cursor:pointer;transition:.25s;
+    letter-spacing:.5px;position:relative;overflow:hidden}
+  .run:hover{background:var(--gold-hi);box-shadow:0 6px 26px rgba(212,175,55,.4)}
+  .run:disabled{opacity:.5;cursor:wait}
+
+  .flow{padding:20px;display:flex;flex-direction:column;gap:0}
+  .step{display:flex;gap:13px;opacity:.25;transition:.45s;padding:9px 0}
+  .step.on{opacity:1}
+  .step .ic{flex:none;width:30px;height:30px;border-radius:9px;border:1px solid var(--line);
+    display:grid;place-items:center;font-size:13px;color:var(--gold);background:var(--gold-soft);
+    font-family:var(--mono);transition:.4s}
+  .step.on .ic{box-shadow:0 0 18px rgba(212,175,55,.35)}
+  .step.done .ic{background:var(--ok);border-color:rgba(0,229,160,.4);color:var(--mint);
+    box-shadow:0 0 14px rgba(0,229,160,.25)}
+  .step .t{font-size:13.5px;font-weight:600;padding-top:4px}
+  .step .d{font-size:11.5px;color:var(--faint);font-family:var(--mono)}
+  .mail{margin-top:14px;background:#0d1018;border:1px solid var(--line2);border-radius:10px;
+    padding:16px;font-size:13px;display:none}
+  .mail.show{display:block;animation:up .5s ease}
+  @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .mail .h{font-family:var(--mono);font-size:11px;color:var(--faint);border-bottom:1px solid var(--line2);
+    padding-bottom:9px;margin-bottom:11px;line-height:1.8}
+  .mail .h b{color:var(--muted);font-weight:600}
+  .mail pre{white-space:pre-wrap;font-family:inherit;line-height:1.65;color:var(--ink)}
+  .mail .cur{display:inline-block;width:8px;height:15px;background:var(--gold);vertical-align:-2px;
+    animation:blink .8s infinite}
+  @keyframes blink{50%{opacity:0}}
+  .gate{margin-top:12px;display:none;align-items:center;gap:10px;background:var(--gold-soft);
+    border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:12.5px}
+  .gate.show{display:flex;animation:up .5s ease}
+  .gate .lock{font-size:16px}
+  .gate b{color:var(--gold-hi)}
+
+  /* how */
+  .steps3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px;
+    perspective:1200px}
+  @media(max-width:760px){.steps3{grid-template-columns:1fr}}
+  .s3{border:1px solid var(--line2);border-radius:14px;padding:22px;background:rgba(10,12,20,.8);
+    transition:transform .25s ease,border-color .25s;will-change:transform}
+  .s3:hover{border-color:var(--line)}
+  .s3 .n{font-family:var(--mono);font-size:26px;color:var(--gold);font-weight:700;
+    text-shadow:0 0 22px rgba(212,175,55,.4)}
+  .s3 h3{font-size:15.5px;margin:10px 0 6px}
+  .s3 p{font-size:13px;color:var(--muted)}
+
+  /* offre */
+  .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px;perspective:1200px}
+  @media(max-width:860px){.tiers{grid-template-columns:1fr}}
+  .tier{border:1px solid var(--line2);border-radius:16px;padding:26px 24px;background:rgba(10,12,20,.85);
+    display:flex;flex-direction:column;gap:6px;position:relative;transition:transform .25s ease,
+    border-color .25s,box-shadow .25s;will-change:transform}
+  .tier:hover{border-color:var(--line);box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 40px rgba(212,175,55,.07)}
+  .tier.hot{border-color:var(--gold);box-shadow:0 0 44px rgba(212,175,55,.10)}
+  .tier.hot::before{content:"LE PRODUIT";position:absolute;top:-10px;left:22px;background:var(--gold);
+    color:#0a0800;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:2px;
+    border-radius:5px;padding:2px 9px}
+  .tier .name{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--faint)}
+  .tier .price{font-size:32px;font-weight:800;color:var(--gold-hi);margin:4px 0;
+    text-shadow:0 0 26px rgba(255,209,102,.25)}
+  .tier .price small{font-size:13px;color:var(--muted);font-weight:500}
+  .tier ul{list-style:none;margin:10px 0 18px;display:flex;flex-direction:column;gap:8px}
+  .tier li{font-size:13.5px;color:var(--muted);padding-left:20px;position:relative}
+  .tier li::before{content:"—";position:absolute;left:0;color:var(--gold)}
+  .tier .cta{margin-top:auto;text-align:center}
+
+  /* faq */
+  details{border:1px solid var(--line2);border-radius:12px;margin-top:12px;background:rgba(10,12,20,.8);
+    transition:border-color .25s}
+  details:hover,details[open]{border-color:var(--line)}
+  summary{cursor:pointer;padding:16px 20px;font-weight:650;font-size:14.5px;list-style:none;
+    display:flex;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";margin-left:auto;color:var(--gold);font-size:19px;transition:.25s}
+  details[open] summary::after{transform:rotate(45deg)}
+  details .a{padding:0 20px 18px;color:var(--muted);font-size:13.5px;max-width:720px}
+
+  /* footer */
+  footer{border-top:1px solid var(--line2);padding:60px 0 70px;text-align:center;position:relative;z-index:2}
+  footer .big{font-size:clamp(20px,3vw,27px);font-weight:750;margin-bottom:8px}
+  footer .note{font-size:12px;color:var(--faint);margin-top:26px;line-height:1.7}
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    #bg{display:none}
+    .rv{opacity:1;transform:none}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="veil" aria-hidden="true"></div>
+
+<nav><div class="wrap">
+  <span class="logo">EMERIC · AUTOMATION</span>
+  <span class="sp"></span>
+  <a class="cta ghost" href="#demo">Voir la démo</a>
+  <a class="cta" href="mailto:emerichelyelevi@gmail.com?subject=Workflow%20pilote%20350%E2%82%AC">Lancer un pilote — 350 €</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <span class="tag">Marque blanche · n8n + IA · France</span>
+  <h1>Vous vendez l'automatisation.<br><em>Je la construis.</em></h1>
+  <p class="sub">Workflows n8n + IA livrés <b>en 7 jours</b>, documentés, <b>sous votre marque</b>.
+  Votre agence signe le client — je fournis les bras. Premier workflow : <b>350 € fixe</b>,
+  pour juger sur pièce.</p>
+  <div class="row">
+    <a class="cta" href="#demo">▶ Démo interactive (2 min)</a>
+    <a class="cta ghost" href="#offre">Voir l'offre</a>
+  </div>
+  <div class="scrolldn" aria-hidden="true"></div>
+</div></header>
+
+<section id="demo"><div class="wrap">
+  <div class="kicker rv">Démonstration</div>
+  <h2 class="rv">Un workflow réel : la relance de factures impayées</h2>
+  <p class="lead rv">Modifie les paramètres, lance le workflow, et regarde ce que ton client
+  recevrait. C'est une <b style="color:var(--ink)">simulation aux données fictives</b> —
+  la version livrée tourne sur n8n, branchée aux vrais outils du client.</p>
+
+  <div class="demo rv">
+    <div class="scan" aria-hidden="true"></div>
+    <div class="bar">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span>workflow · relance-factures.json</span>
+      <span class="sim">SIMULATION — DONNÉES FICTIVES</span>
+    </div>
+    <div class="body">
+      <div class="panel">
+        <label for="cl">Client (fictif)</label>
+        <input id="cl" value="Menuiserie Le Goff" maxlength="40">
+        <label for="amt">Montant dû (€)</label>
+        <input id="amt" type="number" value="1840" min="1" max="999999">
+        <label for="late">Retard</label>
+        <select id="late">
+          <option value="8">8 jours — 1ʳᵉ relance</option>
+          <option value="24" selected>24 jours — 2ᵉ relance</option>
+          <option value="52">52 jours — mise en demeure amiable</option>
+        </select>
+        <label for="tone">Signature (votre agence)</label>
+        <input id="tone" value="Agence Horizon" maxlength="40">
+        <button class="run" id="run" onclick="runDemo()">⟶ Lancer le workflow</button>
+      </div>
+      <div class="flow">
+        <div class="step" id="s1"><span class="ic">1</span>
+          <div><div class="t">Facture en retard détectée</div>
+          <div class="d" id="d1">source : logiciel de facturation du client</div></div></div>
+        <div class="step" id="s2"><span class="ic">2</span>
+          <div><div class="t">Analyse du contexte</div>
+          <div class="d" id="d2">historique de paiement · niveau de relance</div></div></div>
+        <div class="step" id="s3"><span class="ic">3</span>
+          <div><div class="t">E-mail rédigé par l'IA</div>
+          <div class="d">ton adapté au retard — jamais agressif trop tôt</div></div></div>
+        <div class="step" id="s4"><span class="ic">4</span>
+          <div><div class="t">Validation humaine</div>
+          <div class="d">rien ne part sans accord — par conception</div></div></div>
+        <div class="mail" id="mail">
+          <div class="h">De : <b id="mh-from">compta@client.fr</b><br>
+          À : <b id="mh-to">contact@menuiserie-legoff.fr</b><br>
+          Objet : <b id="mh-subj">…</b></div>
+          <pre id="mtxt"></pre>
+        </div>
+        <div class="gate" id="gate"><span class="lock">🔒</span>
+          <div>E-mail en attente de <b>validation humaine</b>. Dans la version livrée :
+          un clic dans Slack/Teams pour approuver — l'envoi part, tout est tracé.</div></div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="kicker rv">Fonctionnement</div>
+  <h2 class="rv">Trois étapes, sept jours</h2>
+  <div class="steps3">
+    <div class="s3 rv tilt"><div class="n">01</div><h3>Vous m'envoyez le besoin</h3>
+      <p>Le processus du client en quelques lignes : quoi automatiser, quels outils
+      (CRM, facturation, e-mail…). Un appel de 15 min si nécessaire.</p></div>
+    <div class="s3 rv tilt"><div class="n">02</div><h3>Je construis, vous suivez</h3>
+      <p>Workflow n8n + IA, testé sur données réelles, avec validation humaine sur
+      toute action sensible. Point d'étape à mi-parcours.</p></div>
+    <div class="s3 rv tilt"><div class="n">03</div><h3>Livraison sous votre marque</h3>
+      <p>Workflow documenté, vidéo de passation, export JSON. Votre client ne connaît
+      que vous — c'est le principe de la marque blanche.</p></div>
+  </div>
+</div></section>
+
+<section id="offre"><div class="wrap">
+  <div class="kicker rv">Offre</div>
+  <h2 class="rv">Des prix simples, sans engagement piège</h2>
+  <div class="tiers">
+    <div class="tier rv tilt">
+      <span class="name">Pilote</span>
+      <span class="price">350 € <small>fixe</small></span>
+      <ul><li>1 workflow au choix, livré en 7 jours</li>
+      <li>Documentation + export JSON inclus</li>
+      <li>Sous votre marque, dès le premier jour</li>
+      <li>Zéro engagement — jugez sur pièce</li></ul>
+      <a class="cta" href="mailto:emerichelyelevi@gmail.com?subject=Workflow%20pilote%20350%E2%82%AC">Démarrer un pilote</a>
+    </div>
+    <div class="tier hot rv tilt">
+      <span class="name">Forfait capacité</span>
+      <span class="price">600–900 € <small>/mois</small></span>
+      <ul><li>2 à 3 workflows par mois</li>
+      <li>Maintenance de l'existant incluse</li>
+      <li>Délai prioritaire (72 h sur correctifs)</li>
+      <li>Résiliable chaque mois</li></ul>
+      <a class="cta" href="mailto:emerichelyelevi@gmail.com?subject=Forfait%20capacit%C3%A9">Discuter du forfait</a>
+    </div>
+    <div class="tier rv tilt">
+      <span class="name">Marque blanche +</span>
+      <span class="price">Sur devis</span>
+      <ul><li>Votre « équipe automatisation » externalisée</li>
+      <li>Présent dans vos propositions commerciales</li>
+      <li>Avant-vente technique à vos côtés</li>
+      <li>Après 2 mois de forfait minimum</li></ul>
+      <a class="cta ghost" href="mailto:emerichelyelevi@gmail.com?subject=Marque%20blanche">En parler</a>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="kicker rv">Questions directes</div>
+  <h2 class="rv">Les réponses honnêtes</h2>
+  <details class="rv"><summary>Pourquoi si peu cher ?</summary>
+    <div class="a">Parce que je construis mon portefeuille d'agences partenaires et que le
+    pilote est un ticket d'entrée, pas mon prix de croisière. Le marché facture ce type de
+    workflow 3 à 5 fois plus — vous le savez, c'est vous qui le vendez. Le forfait mensuel
+    est mon vrai produit ; le pilote sert à prouver que je livre.</div></details>
+  <details class="rv"><summary>Qui êtes-vous ?</summary>
+    <div class="a">Emeric, builder d'automatisations basé en Bretagne. Je développe un
+    système d'exploitation d'agents IA open source (HELYOS) et je construis des workflows
+    n8n + IA avec une règle non négociable : toute action sensible (envoi, paiement,
+    suppression) exige une validation humaine. Je ne vends pas de magie — je vends du
+    temps rendu à vos équipes.</div></details>
+  <details class="rv"><summary>Quels types de workflows ?</summary>
+    <div class="a">Relances de factures, qualification et routage de leads, onboarding
+    client, reporting automatique, tri et réponse d'e-mails entrants, synchronisation
+    CRM ↔ facturation, alimentation de tableaux de bord. Si c'est répétitif et que ça passe
+    par des outils connectables, c'est automatisable. En cas de doute : demandez, je réponds
+    sous 24 h — y compris « non, ça ne vaut pas le coût ».</div></details>
+  <details class="rv"><summary>Et la confidentialité de la marque blanche ?</summary>
+    <div class="a">Contractuelle et simple : je n'apparais nulle part, je ne contacte jamais
+    vos clients, je ne cite jamais votre agence en référence sans accord écrit. Vos process
+    et vos prix restent les vôtres.</div></details>
+  <details class="rv"><summary>Que se passe-t-il si le pilote ne me convient pas ?</summary>
+    <div class="a">Vous gardez le workflow, la documentation et l'export JSON — c'est payé,
+    c'est à vous. On s'arrête là, sans friction. Le risque du pilote est plafonné à 350 €,
+    c'est son rôle.</div></details>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="big rv">Un projet en cours où un renfort changerait quelque chose ce mois-ci ?</div>
+  <p class="lead rv" style="margin:0 auto 26px;max-width:520px">Décrivez le besoin en trois lignes.
+  Réponse sous 24 h, chiffrage immédiat si c'est dans mes cordes — et un « non » franc si ça ne l'est pas.</p>
+  <a class="cta rv" href="mailto:emerichelyelevi@gmail.com?subject=Workflow%20pilote%20350%E2%82%AC&body=Notre%20agence%20%3A%0AL'outil%20du%20client%20%3A%0ALe%20processus%20%C3%A0%20automatiser%20%3A">✉ emerichelyelevi@gmail.com</a>
+  <p class="note">La démonstration ci-dessus est une simulation sur données fictives — aucune donnée
+  réelle, aucun chiffre inventé sur des résultats clients. Micro-entreprise en cours d'immatriculation.<br>
+  Construit avec la même exigence que <a href="https://github.com/Ninht-cmd/HELYOS">HELYOS</a>,
+  mon OS d'agents IA open source.</p>
+</div></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ============ fond 3D — icosaèdre or + particules + parallaxe ============ */
+(function bg3d(){
+  if (reduced || !window.THREE) return;
+  const canvas = $('#bg');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x04050a, 0.06);
+  const cam = new THREE.PerspectiveCamera(60, 1, .1, 100);
+  cam.position.z = 7;
+
+  // icosaèdre principal en fil de fer or
+  const ico = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(2.6, 1)),
+    new THREE.LineBasicMaterial({ color:0xd4af37, transparent:true, opacity:.30 }));
+  scene.add(ico);
+  // noyau interne, rotation inverse
+  const core = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1.15, 0)),
+    new THREE.LineBasicMaterial({ color:0xffd166, transparent:true, opacity:.42 }));
+  scene.add(core);
+  // anneau incliné
+  const ring = new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints(
+      Array.from({length:120},(_,i)=>{const a=i/120*Math.PI*2;
+        return new THREE.Vector3(Math.cos(a)*3.6,Math.sin(a)*3.6,0);})),
+    new THREE.LineBasicMaterial({ color:0xd4af37, transparent:true, opacity:.14 }));
+  ring.rotation.x = Math.PI/2.6; scene.add(ring);
+
+  // champ de particules dorées
+  const isMobile = innerWidth < 760;
+  const N = isMobile ? 260 : 700;
+  const pos = new Float32Array(N*3);
+  for (let i=0;i<N;i++){
+    const r = 4 + Math.random()*14, th = Math.random()*Math.PI*2, ph = Math.acos(2*Math.random()-1);
+    pos[i*3]   = r*Math.sin(ph)*Math.cos(th);
+    pos[i*3+1] = r*Math.sin(ph)*Math.sin(th)*.6;
+    pos[i*3+2] = r*Math.cos(ph)-6;
+  }
+  const pgeo = new THREE.BufferGeometry();
+  pgeo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const stars = new THREE.Points(pgeo, new THREE.PointsMaterial({
+    color:0xffd166, size:.035, transparent:true, opacity:.75,
+    blending:THREE.AdditiveBlending, depthWrite:false }));
+  scene.add(stars);
+
+  // parallaxe souris (lissée)
+  let mx=0,my=0,tx=0,ty=0;
+  addEventListener('pointermove', e=>{
+    tx=(e.clientX/innerWidth-.5)*2; ty=(e.clientY/innerHeight-.5)*2; },{passive:true});
+
+  function resize(){
+    renderer.setSize(innerWidth, innerHeight, false);
+    cam.aspect = innerWidth/innerHeight; cam.updateProjectionMatrix();
+  }
+  addEventListener('resize', resize); resize();
+
+  let t=0;
+  (function loop(){
+    requestAnimationFrame(loop);
+    if (document.hidden) return;
+    t+=.004;
+    mx+=(tx-mx)*.04; my+=(ty-my)*.04;
+    ico.rotation.y=t*.9; ico.rotation.x=Math.sin(t*.55)*.28;
+    core.rotation.y=-t*1.5; core.rotation.z=t*.7;
+    ring.rotation.z=t*.32;
+    stars.rotation.y=t*.05;
+    cam.position.x=mx*.7; cam.position.y=-my*.5+Math.sin(t*.8)*.12;
+    cam.lookAt(0,0,0);
+    const s=1+Math.sin(t*2.1)*.02; core.scale.setScalar(s);   // pulsation du noyau
+    renderer.render(scene, cam);
+  })();
+})();
+
+/* ============ révélations au scroll ============ */
+(function reveal(){
+  if (reduced) return;
+  const io = new IntersectionObserver(es=>es.forEach(e=>{
+    if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+  }),{threshold:.12});
+  document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+})();
+
+/* ============ tilt 3D sur les cartes ============ */
+(function tilt(){
+  if (reduced || matchMedia('(hover: none)').matches) return;
+  document.querySelectorAll('.tilt').forEach(card=>{
+    card.addEventListener('pointermove', e=>{
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX-r.left)/r.width-.5, y = (e.clientY-r.top)/r.height-.5;
+      card.style.transform = `rotateY(${x*7}deg) rotateX(${-y*7}deg) translateY(-3px)`;
+    });
+    card.addEventListener('pointerleave', ()=>{ card.style.transform=''; });
+  });
+})();
+
+/* ============ démo interactive (inchangée : simulation étiquetée) ============ */
+const slug = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+  .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'client';
+
+function draftEmail(client, amount, late, agency){
+  const amt = Number(amount).toLocaleString('fr-FR') + ' €';
+  if (late <= 14) return {
+    subj: `Facture en attente — ${amt}`,
+    body: `Bonjour,\n\nSauf erreur de notre part, la facture d'un montant de ${amt} arrivait à échéance il y a ${late} jours.\n\nIl s'agit sans doute d'un simple oubli — le règlement peut se faire par virement aux coordonnées habituelles. Si le paiement est déjà parti, merci d'ignorer ce message.\n\nBien cordialement,\nLe service comptabilité\n${agency ? '— dossier suivi via ' + agency : ''}`};
+  if (late <= 45) return {
+    subj: `Relance — facture ${amt} (${late} jours de retard)`,
+    body: `Bonjour,\n\nMalgré notre précédent message, la facture de ${amt} demeure impayée à ce jour (${late} jours après échéance).\n\nNous vous remercions de procéder au règlement sous 8 jours, ou de nous indiquer toute difficulté afin de convenir ensemble d'un échéancier.\n\nDans l'attente de votre retour,\nLe service comptabilité\n${agency ? '— dossier suivi via ' + agency : ''}`};
+  return {
+    subj: `Mise en demeure amiable — facture ${amt}`,
+    body: `Bonjour,\n\nLa facture de ${amt} reste impayée ${late} jours après son échéance, malgré nos relances.\n\nSans règlement ou réponse de votre part sous 8 jours, nous serons contraints d'appliquer les pénalités de retard prévues (art. L441-10 C. com.) et d'envisager un recouvrement.\n\nNous restons ouverts à un échange pour trouver une issue simple — un appel suffit.\n\nLe service comptabilité\n${agency ? '— dossier suivi via ' + agency : ''}`};
+}
+
+let running = false;
+async function runDemo(){
+  if (running) return; running = true;
+  const btn = $('#run'); btn.disabled = true; btn.textContent = '⟶ exécution…';
+  const client = $('#cl').value.trim() || 'Client Exemple';
+  const amount = Math.max(1, Number($('#amt').value) || 500);
+  const late   = Number($('#late').value);
+  const agency = $('#tone').value.trim();
+
+  for (const id of ['s1','s2','s3','s4']) { $('#'+id).classList.remove('on','done'); }
+  $('#mail').classList.remove('show'); $('#gate').classList.remove('show');
+  $('#mtxt').textContent = '';
+
+  $('#d1').textContent = `facture ${client} · ${Number(amount).toLocaleString('fr-FR')} € · échue depuis ${late} j`;
+  $('#d2').textContent = late <= 14 ? 'ton retenu : courtois (1ʳᵉ relance)'
+    : late <= 45 ? 'ton retenu : ferme et professionnel' : 'ton retenu : formel (pré-contentieux)';
+
+  $('#s1').classList.add('on'); await sleep(700); $('#s1').classList.add('done');
+  $('#s2').classList.add('on'); await sleep(900); $('#s2').classList.add('done');
+  $('#s3').classList.add('on');
+
+  const mail = draftEmail(client, amount, late, agency);
+  $('#mh-to').textContent = `contact@${slug(client)}.fr`;
+  $('#mh-subj').textContent = mail.subj;
+  $('#mail').classList.add('show');
+
+  const pre = $('#mtxt'); const cur = document.createElement('span'); cur.className = 'cur';
+  pre.after(cur);
+  for (let i = 0; i < mail.body.length; i += 3){
+    pre.textContent = mail.body.slice(0, i + 3);
+    await sleep(reduced ? 0 : 9);
+  }
+  cur.remove();
+  $('#s3').classList.add('done');
+  $('#s4').classList.add('on'); await sleep(500);
+  $('#gate').classList.add('show');
+
+  btn.disabled = false; btn.textContent = '⟶ Relancer le workflow'; running = false;
+}
+</script>
+</body>
+</html>
