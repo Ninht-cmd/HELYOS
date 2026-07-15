@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relances de factures — Espace dirigeant</title>
+<style>
+  /* Espace DIRIGEANT : zéro installation, zéro identifiant, zéro jargon.
+     Les données ne quittent jamais cette page ; l'envoi s'ouvre dans SA messagerie. */
+  :root{--bg:#f6f8fa;--card:#fff;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;
+        --mint:#10b981;--mint-soft:#d1fae5;--amber:#f59e0b;--amber-soft:#fef3c7;
+        --coral:#ef4444;--coral-soft:#fee2e2}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Inter,sans-serif;
+       max-width:860px;margin:0 auto;padding:28px 18px 60px}
+  h1{font-size:22px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:13.5px;margin-bottom:24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(16,24,40,.06)}
+  .card h2{font-size:15px;margin-bottom:10px}
+  .hint{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:10px}
+  textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:10px;
+           padding:10px;font:12.5px ui-monospace,Consolas,monospace;resize:vertical}
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--mint);color:#fff;
+       border:0;border-radius:10px;padding:10px 16px;font:600 13.5px inherit;cursor:pointer;margin-top:10px}
+  .btn:hover{filter:brightness(1.07)}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.small{padding:7px 12px;font-size:12.5px;margin-top:0}
+  .inv{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+  .inv .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .inv b{font-size:14px}
+  .pill{font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 8px}
+  .n1{background:var(--mint-soft);color:#065f46}
+  .n2{background:var(--amber-soft);color:#92400e}
+  .n3{background:var(--coral-soft);color:#991b1b}
+  .done{background:#eef2f7;color:#64748b}
+  .inv .sum{margin-left:auto;font-weight:700}
+  details{margin-top:8px}
+  summary{font-size:12.5px;color:var(--muted);cursor:pointer}
+  .mail{white-space:pre-wrap;font-size:12.5px;background:var(--bg);border:1px solid var(--line);
+        border-radius:8px;padding:10px;margin-top:8px;line-height:1.55}
+  .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .empty{color:var(--muted);font-size:13px;padding:8px 0}
+  .foot{font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:22px;text-align:center}
+  .kpis{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .kpi{flex:1;min-width:140px;background:var(--card);border:1px solid var(--line);
+       border-radius:12px;padding:12px 14px}
+  .kpi .v{font-size:20px;font-weight:750}
+  .kpi .l{font-size:11.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+  <h1>Relances de factures</h1>
+  <p class="sub">Espace dirigeant — [Votre entreprise]. Collez vos factures, validez, c'est envoyé depuis <b>votre</b> messagerie.</p>
+
+  <div class="kpis" id="kpis" hidden>
+    <div class="kpi"><div class="v" id="k-total">0 €</div><div class="l">en attente de paiement</div></div>
+    <div class="kpi"><div class="v" id="k-count">0</div><div class="l">facture(s) à relancer</div></div>
+    <div class="kpi"><div class="v" id="k-done">0</div><div class="l">relance(s) faites (30 j)</div></div>
+  </div>
+
+  <div class="card">
+    <h2>1 · Vos factures</h2>
+    <p class="hint">Copiez-collez depuis Excel / Google Sheets (colonnes : <b>client, email,
+    n° facture, montant, échéance AAAA-MM-JJ, statut</b>). Une ligne par facture —
+    séparateur virgule, point-virgule ou tabulation, peu importe.</p>
+    <textarea id="src" placeholder="Dupont SARL, compta@dupont.fr, F-2026-041, 1250, 2026-06-12,
+Martin & Fils; martin@fils.fr; F-2026-038; 480; 2026-06-25; payée"></textarea>
+    <button class="btn" onclick="analyse()">Analyser mes factures</button>
+    <button class="btn ghost" onclick="demo()">Voir avec un exemple</button>
+  </div>
+
+  <div class="card">
+    <h2>2 · Relances proposées — vous validez, rien ne part sans vous</h2>
+    <div id="list"><div class="empty">Collez vos factures ci-dessus puis cliquez « Analyser ».</div></div>
+  </div>
+
+  <p class="foot">🔒 Vos données ne quittent pas cette page (aucun serveur, aucun compte).
+  « Envoyer » ouvre le message <b>prêt</b> dans votre messagerie habituelle — c'est vous qui
+  appuyez sur Envoyer. Anti-spam : un client déjà relancé depuis moins de 6 jours est mis en pause.
+  <br>Installé par [Votre agence] · propulsé par une IA sous contrôle humain</p>
+
+<script>
+const $ = s => document.querySelector(s);
+const DAY = 86400000;
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch(_){ return {}; } };
+const lsSet = (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(_){} };
+
+// mêmes règles et mêmes textes que le moteur (workflow n8n) : une seule vérité
+function compose(f, late) {
+  const lvl = late >= 30 ? 3 : late >= 14 ? 2 : 1;
+  const m = Number(f.montant).toFixed(2);
+  const obj = {1:`Facture ${f.num} — échéance dépassée`,
+               2:`Relance : facture ${f.num} (${m} €) en attente`,
+               3:`Dernier rappel avant mise en demeure — facture ${f.num}`}[lvl];
+  const body = {
+    1:`Bonjour ${f.client},\n\nSauf erreur de notre part, la facture ${f.num} de ${m} €, échue le ${f.due}, reste en attente de règlement.\n\nSi le paiement est déjà parti, merci d'ignorer ce message.\n\nBien cordialement`,
+    2:`Bonjour ${f.client},\n\nMalgré notre précédent message, la facture ${f.num} de ${m} € (échue le ${f.due}) demeure impayée (${late} jours de retard).\n\nMerci de procéder au règlement sous 7 jours, ou de nous indiquer la difficulté — nous trouverons une solution.\n\nBien cordialement`,
+    3:`Bonjour ${f.client},\n\nLa facture ${f.num} de ${m} € est impayée depuis ${late} jours malgré nos relances.\n\nSans règlement ou réponse sous 8 jours, nous devrons engager une procédure de recouvrement. Nous préférerions l'éviter.\n\nCordialement`}[lvl];
+  return { lvl, obj, body };
+}
+
+function parse(text) {
+  return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+    const p = l.split(/[;,\t]/).map(x => x.trim());
+    return { client: p[0]||'', email: p[1]||'', num: p[2]||'', montant: p[3]||'0',
+             due: p[4]||'', statut: (p[5]||'').toLowerCase() };
+  }).filter(f => f.client && f.email && f.due);
+}
+
+function analyse() {
+  const now = Date.now();
+  const journal = lsGet('relances_journal');
+  const rows = parse($('#src').value);
+  const items = [];
+  let total = 0;
+  for (const f of rows) {
+    if (f.statut.includes('pay') || f.statut.includes('accord')) continue;
+    const late = Math.floor((now - new Date(f.due).getTime()) / DAY);
+    if (isNaN(late) || late < 7) continue;
+    total += Number(f.montant) || 0;
+    const last = journal[f.num];
+    const paused = last && (now - last) / DAY < 6;
+    items.push({ f, late, paused, ...compose(f, late) });
+  }
+  const doneCount = Object.values(journal).filter(t => (now - t) / DAY <= 30).length;
+  $('#kpis').hidden = false;
+  $('#k-total').textContent = total.toLocaleString('fr-FR') + ' €';
+  $('#k-count').textContent = items.filter(i => !i.paused).length;
+  $('#k-done').textContent = doneCount;
+  $('#list').innerHTML = items.length ? items.map((it, i) => `
+    <div class="inv" id="inv-${i}">
+      <div class="top">
+        <b>${esc(it.f.client)}</b>
+        <span class="pill n${it.lvl}">${it.paused ? '' : 'relance ' + it.lvl + ' · '}${it.late} j de retard</span>
+        ${it.paused ? '<span class="pill done">déjà relancé — pause anti-spam</span>' : ''}
+        <span class="sum">${Number(it.f.montant).toLocaleString('fr-FR')} €</span>
+      </div>
+      <details><summary>Lire le message qui sera proposé</summary>
+        <div class="mail"><b>Objet :</b> ${esc(it.obj)}\n\n${esc(it.body)}</div>
+      </details>
+      ${it.paused ? '' : `<div class="row">
+        <button class="btn small" onclick="envoyer(${i})">✉ Envoyer depuis ma messagerie</button>
+        <button class="btn ghost small" onclick="ignorer(${i})">Ignorer cette fois</button>
+      </div>`}
+    </div>`).join('')
+    : '<div class="empty">Bonne nouvelle : aucune facture ne nécessite de relance aujourd\'hui.</div>';
+  window._items = items;
+}
+
+function envoyer(i) {
+  const it = window._items[i];
+  const url = 'mailto:' + encodeURIComponent(it.f.email)
+    + '?subject=' + encodeURIComponent(it.obj)
+    + '&body=' + encodeURIComponent(it.body);
+  const journal = lsGet('relances_journal');
+  journal[it.f.num] = Date.now();
+  lsSet('relances_journal', journal);
+  document.getElementById('inv-' + i).style.opacity = .55;
+  location.href = url;                 // ouvre Gmail/Outlook prérempli — LUI appuie sur Envoyer
+}
+
+function ignorer(i) { document.getElementById('inv-' + i).style.display = 'none'; }
+
+function demo() {
+  const d = new Date(Date.now() - 16 * DAY).toISOString().slice(0, 10);
+  const d2 = new Date(Date.now() - 9 * DAY).toISOString().slice(0, 10);
+  const d3 = new Date(Date.now() - 35 * DAY).toISOString().slice(0, 10);
+  $('#src').value = `Dupont SARL, compta@dupont.fr, F-2026-041, 1250, ${d}
+Martin & Fils, martin@fils.fr, F-2026-038, 480, ${d2}
+Bâti Sud, contact@batisud.fr, F-2026-022, 2300, ${d3}
+Payée SA, ok@payee.fr, F-2026-040, 900, ${d}, payée`;
+  analyse();
+}
+</script>
+</body>
+</html>
