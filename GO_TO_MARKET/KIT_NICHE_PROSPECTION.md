@@ -42,11 +42,13 @@ de juin : 500–1 000 € (M1-M3), 2 000–3 000 € (M4-M6).
 
 ## 2. L'OFFRE (3 étages)
 
-**Étage 1 — Workflow pilote : 350 € fixe, livré en 7 jours.**
+**Étage 1 — Workflow pilote : 350 € — PAYÉ À LA LIVRAISON, sinon 0 €.**
 UN workflow au choix de l'agence (relance factures, qualification de leads,
-onboarding client, reporting auto). Sous sa marque, documentation incluse.
-Prix volontairement sous le marché : c'est un ticket d'entrée sans risque
-pour l'agence, pas ton prix de croisière.
+onboarding client, reporting auto). Sous sa marque, documentation incluse,
+livré en 7 jours — l'agence ne paie que quand ça tourne chez elle.
+C'est la réponse à l'objection n°1 (« je ne paie pas un inconnu d'avance ») :
+le risque est à 100 % chez toi, et à 350 € tu peux te le permettre. Une agence
+qui refuse ça n'avait aucune intention d'acheter.
 
 **Étage 2 — Forfait capacité : 600–900 €/mois.**
 2 à 3 workflows/mois + maintenance de l'existant. C'est LE produit.
@@ -103,13 +105,21 @@ Je construis des workflows n8n + IA en marque blanche pour des agences comme
 la vôtre : vous vendez, je livre sous votre nom. Relances clients, qualification
 de leads, reporting, onboarding — livrés documentés en 7 jours.
 
-Premier workflow : 350 € fixe, pour que vous jugiez sur pièce sans risque.
+Le pilote : 350 €, **payés uniquement à la livraison, quand ça tourne chez vous**.
+Si je ne livre pas en 7 jours, vous ne devez rien. Le risque est chez moi.
 
-Une démo de 3 minutes en vidéo : [lien]
+Pour juger sur pièce : démo cliquable [lien] — et mon moteur est open-source,
+code et tests publics : https://github.com/Ninht-cmd/HELYOS
 
 Ça vaut un essai sur un de vos projets en cours ?
 
 Emeric
+
+> *Pourquoi ces deux preuves : une vidéo se truque, un repo public avec 180+
+> tests et des mois de commits ne se truque pas — c'est le seul CV qu'un
+> inconnu de 19 ans puisse opposer à un fondateur d'agence. Et « payé à la
+> livraison » transforme « pourquoi je te croirais ? » en « qu'est-ce que je
+> risque ? rien ».*
 
 ### E-mail 2 (J+4) — la relance courte
 
