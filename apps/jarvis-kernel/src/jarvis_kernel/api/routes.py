@@ -195,7 +195,9 @@ def prospection_add(request: Request, body: dict) -> dict:
     pipe = ProspectionPipeline(ctx.memory)
     p = pipe.add(name, company=str(body.get("company", "")),
                  contact=str(body.get("contact", "")), note=str(body.get("note", "")))
-    return {"prospect": p.to_dict(), "draft": pipe.draft_outreach(ctx.llm, p)}
+    # draft=false : chargement en masse sans rédaction LLM (le brouillon viendra à la demande)
+    draft = pipe.draft_outreach(ctx.llm, p) if body.get("draft", True) else None
+    return {"prospect": p.to_dict(), "draft": draft}
 
 
 @router.post("/prospection/status", tags=["prospection"])
