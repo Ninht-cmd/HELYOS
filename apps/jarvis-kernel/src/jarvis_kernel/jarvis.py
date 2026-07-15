@@ -25,8 +25,9 @@ from .governance.policy import Action, ActionType, Decision
 from .observability.tracing import span
 
 # Intentions reconnues. La classification renvoie l'une de ces étiquettes.
-INTENTS = ("portefeuille", "prospection", "relance_factures", "creer_business", "recherche",
-           "marche_financier", "simulation_trading", "action_dangereuse", "conversation")
+INTENTS = ("portefeuille", "tresorerie", "prospection", "relance_factures", "creer_business",
+           "recherche", "marche_financier", "simulation_trading", "action_dangereuse",
+           "conversation")
 
 # Filet déterministe (marche sans LLM). Motifs verbe/sujet, pas simples mots-clés.
 # ORDRE VOLONTAIRE : les actions dangereuses sont testées EN PREMIER — « supprime mes
@@ -35,6 +36,9 @@ _RULES: list[tuple[str, str]] = [
     # « paie(?!ment) » : « paie la facture » = financier, mais « paiement en retard »
     # appartient au flux factures — sinon la relance serait détournée vers la gouvernance.
     ("action_dangereuse", r"supprim|efface|d[ée]truis|vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te|vends|investis|donne.{0,10}droit|permission|privil[eè]g"),
+    # la caisse : noter une recette/dépense DÉJÀ réalisée, ou demander le bilan.
+    # (« fais un virement » reste action_dangereuse : la règle du dessus passe d'abord.)
+    ("tresorerie", r"encaiss|d[ée]pens|tr[ée]sorerie|\bbilan\b|\bsolde\b|combien.{0,20}(gagn|rapport)"),
     ("portefeuille", r"portefeuille|mes business|mes affaires|o[uù] en (est|sont)|statut|tableau de bord|r[ée]capitulatif"),
     # AVANT factures : « qui dois-je relancer » (prospects) ≠ « relance mes factures »
     ("prospection", r"prospect|pipeline|d[ée]marchage|qui dois-je relancer"),
@@ -125,6 +129,8 @@ class Jarvis:
             intent = self.classify(message)
             if intent == "portefeuille":
                 reply = self._portfolio()
+            elif intent == "tresorerie":
+                reply = self._treasury(message)
             elif intent == "prospection":
                 reply = self._prospection(message)
             elif intent == "relance_factures":
@@ -217,6 +223,57 @@ class Jarvis:
                  "validation (GR-7) — et aucun courtier n'est branché, donc je prépare, "
                  "tu exécutes.")
         return JarvisReply("marche_financier", txt, True, v.decision.value)
+
+    def _treasury(self, message: str) -> JarvisReply:
+        """La caisse : « encaisse 350 € de Dupont pour les services » / « bilan »."""
+        ledger = self.ctx.ledger
+        if ledger is None:
+            return JarvisReply("tresorerie", "Livre de caisse indisponible.")
+        m = message.lower()
+        # milliers à la française tolérés : « 1 350 € », « 1 350,50 » (espace fine incluse)
+        amt = re.search(r"(\d{1,3}(?:[   ]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)\s*(?:€|euros?)?", m)
+        kind = ("recette" if re.search(r"encaiss|re[çc]u|gagn|vendu", m)
+                else "depense" if re.search(r"d[ée]pens|pay[ée]|co[ûu]t|achet", m) else None)
+
+        if amt and kind:
+            amount = float(re.sub(r"[   ]", "", amt.group(1)).replace(",", "."))
+            # rattachement au business : le nom (ou un mot distinctif du nom) doit être cité
+            stop = {"helyos", "les", "des", "pour", "de", "la", "le"}
+            best, best_score = None, 0
+            for b in self.ctx.portfolio.list():
+                tokens = [t for t in re.split(r"[^\wé-]+", b.name.lower())
+                          if len(t) > 3 and t not in stop]
+                score = sum(1 for t in tokens if t in m)
+                if score > best_score:
+                    best, best_score = b, score
+            if best is None:
+                names = " · ".join(b.name for b in self.ctx.portfolio.list()) or "aucun business"
+                return JarvisReply("tresorerie",
+                    f"Pour quel business ? Dis par exemple « encaisse {amount:.0f} € — "
+                    f"services ». Portefeuille : {names}.")
+            e = ledger.add(best.name, kind, amount, label=message.strip()[:80])
+            self.ctx.bus.emit("ledger.entry", business=best.name, kind=kind,
+                              amount_eur=e.amount_eur)
+            s = ledger.summary(best.name)
+            g = ledger.global_summary()
+            return JarvisReply("tresorerie",
+                f"Noté : {kind} de {e.amount_eur:.2f} € pour {best.name}.\n"
+                f"  • Solde {best.name} : {s['solde_eur']:.2f} € "
+                f"({s['recettes_eur']:.2f} € de recettes, {s['depenses_eur']:.2f} € de dépenses)\n"
+                f"  • Caisse de la holding : {g['solde_eur']:.2f} €\n"
+                "Écriture de pilotage — la compta légale reste chez ton comptable.")
+
+        # pas d'écriture : le bilan
+        g = ledger.global_summary()
+        if not g["par_business"]:
+            return JarvisReply("tresorerie",
+                "Caisse vide : aucune écriture. Dis « encaisse 350 € — [business] » au premier "
+                "paiement reçu, et le CA affiché deviendra un chiffre VÉRIFIABLE, pas une promesse.")
+        lines = [f"Bilan de caisse — holding : {g['solde_eur']:.2f} € "
+                 f"({g['recettes_eur']:.2f} € in / {g['depenses_eur']:.2f} € out)"]
+        lines += [f"  • {s['business']} : {s['solde_eur']:.2f} € ({s['ecritures']} écriture(s))"
+                  for s in g["par_business"]]
+        return JarvisReply("tresorerie", "\n".join(lines))
 
     def _prospection(self, message: str) -> JarvisReply:
         from .business.prospection import ProspectionPipeline

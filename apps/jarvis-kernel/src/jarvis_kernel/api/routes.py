@@ -172,6 +172,33 @@ def jarvis_history(request: Request) -> list[HistoryEntry]:
     return [HistoryEntry(**e) for e in jarvis.history()]
 
 
+@router.get("/ledger", tags=["ledger"])
+def ledger_summary(request: Request, business: str | None = None) -> dict:
+    """Bilan de caisse réel : global, ou d'un business (`?business=Nom exact`)."""
+    ledger = _ctx(request).ledger
+    if ledger is None:
+        raise HTTPException(status_code=503, detail="Livre de caisse indisponible.")
+    if business:
+        return {**ledger.summary(business),
+                "dernieres_ecritures": [e.to_dict() for e in ledger.entries(business, 10)]}
+    return ledger.global_summary()
+
+
+@router.post("/ledger", tags=["ledger"])
+def ledger_add(request: Request, body: dict) -> dict:
+    """Note une écriture DÉJÀ réalisée (recette|depense). N'exécute aucun paiement (GR-7)."""
+    ctx = _ctx(request)
+    if ctx.ledger is None:
+        raise HTTPException(status_code=503, detail="Livre de caisse indisponible.")
+    try:
+        e = ctx.ledger.add(str(body.get("business", "")), str(body.get("kind", "")),
+                           float(body.get("amount_eur", 0)), str(body.get("label", "")))
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    ctx.bus.emit("ledger.entry", business=e.business, kind=e.kind, amount_eur=e.amount_eur)
+    return {"entry": e.to_dict(), "summary": ctx.ledger.summary(e.business)}
+
+
 @router.get("/prospection", tags=["prospection"])
 def prospection(request: Request) -> dict:
     """Pipeline de prospection réel : prospects, statuts, relances dues, stats vendredi."""

@@ -67,12 +67,34 @@ class BusinessPortfolio:
             self.register(b)
         return b
 
-    def add_task(self, name: str, task: str, owner: str = "humain") -> Business | None:
+    def add_task(self, name: str, task: str, owner: str = "humain",
+                 due: str = "") -> Business | None:
+        """``due`` : échéance ISO ``AAAA-MM-JJ`` (URSSAF, TVA, renouvellement…) — optionnelle."""
         b = self.get(name)
         if b:
-            b.tasks.append({"task": task, "done": False, "owner": owner})
+            entry: dict[str, Any] = {"task": task, "done": False, "owner": owner}
+            if due:
+                entry["due"] = due
+            b.tasks.append(entry)
             self.register(b)
         return b
+
+    def due_tasks(self, within_days: int = 7) -> list[tuple[str, dict]]:
+        """Tâches datées qui échoient sous N jours (ou déjà dépassées), tous business."""
+        import time as _t
+        horizon = _t.time() + within_days * 86400
+        out = []
+        for b in self.list():
+            for t in b.tasks:
+                if t.get("done") or not t.get("due"):
+                    continue
+                try:
+                    due_ts = _t.mktime(_t.strptime(t["due"], "%Y-%m-%d"))
+                except ValueError:
+                    continue                    # date illisible : on ne devine pas
+                if due_ts <= horizon:
+                    out.append((b.name, t))
+        return sorted(out, key=lambda x: x[1]["due"])
 
     def complete_task(self, name: str, task_prefix: str) -> Business | None:
         b = self.get(name)

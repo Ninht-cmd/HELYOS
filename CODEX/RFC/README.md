@@ -33,5 +33,6 @@ Draft  →  In Review  →  Accepted  →  (donne lieu à ADR / implémentation)
 | [0011](RFC-0011-pilotage-v2-acces-iphone.md) | Pilotage v2 (le beau + le vrai) & accès iPhone (PWA) | Accepted |
 | [0012](RFC-0012-le-vrai-jarvis.md) | Le vrai Jarvis : le Pouls (proactivité), la Voix, la Mémoire | Accepted |
 | [0013](RFC-0013-simulation-trading.md) | Trading en simulation — argent fictif, prix réels, P&L honnête | Accepted |
+| [0014](RFC-0014-dossier-business.md) | Dossier Business — livre de caisse + échéances (gérer de A à Z) | Accepted |
 
 Gabarit : [`_template.md`](_template.md).

@@ -119,6 +119,31 @@ class Pulse:
         except Exception:                    # réseau coupé : silence, pas d'invention
             return []
 
+    def _watch_deadlines(self) -> list[PulseItem]:
+        """Échéances datées (URSSAF, TVA, renouvellements…) sous 7 jours = urgentes."""
+        due = self.ctx.portfolio.due_tasks(within_days=7)
+        if not due:
+            return []
+        first = ", ".join(f"{t['task'].replace('[HUMAIN] ', '')} ({t['due']})"
+                          for _, t in due[:3])
+        return [PulseItem("deadline", f"{len(due)} échéance(s) datée(s) sous 7 jours : {first}",
+                          urgent=True)]
+
+    def _watch_treasury(self) -> list[PulseItem]:
+        """Une caisse négative n'attend pas le vendredi pour être annoncée."""
+        if self.ctx.ledger is None:
+            return []
+        g = self.ctx.ledger.global_summary()
+        if not g["par_business"]:
+            return []
+        if g["solde_eur"] < 0:
+            return [PulseItem("treasury",
+                              f"Caisse de la holding NÉGATIVE : {g['solde_eur']:.2f} € — "
+                              "dépenses supérieures aux recettes.", urgent=True)]
+        return [PulseItem("treasury",
+                          f"Caisse : {g['solde_eur']:.2f} € "
+                          f"({g['recettes_eur']:.2f} € in / {g['depenses_eur']:.2f} € out).")]
+
     def _watch_prospection(self) -> list[PulseItem]:
         from .business.prospection import ProspectionPipeline
 
@@ -155,7 +180,8 @@ class Pulse:
         with self._lock:                     # sérialise fond + HTTP + MCP
             items: list[PulseItem] = []
             failures: list[str] = []
-            for watcher in (self._watch_validations, self._watch_tasks,
+            for watcher in (self._watch_validations, self._watch_deadlines,
+                            self._watch_treasury, self._watch_tasks,
                             self._watch_prospection, self._watch_market,
                             self._watch_paper, self._watch_connectors):
                 try:

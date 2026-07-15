@@ -36,6 +36,7 @@ class KernelContext:
     registry: AgentRegistry
     governance: GovernanceService
     portfolio: BusinessPortfolio
+    ledger: object | None = None  # livre de caisse par business (RFC-0014)
     llm: LLMPort | None = None    # backend LLM partagé (Stub ou Ollama selon la config)
     jarvis: object | None = None  # instance Jarvis (câblée dans build_default_context)
     connectors: list = None       # connecteurs vers le monde réel (RFC-0009), tous gouvernés
@@ -93,6 +94,9 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
         portfolio=BusinessPortfolio(memory),   # HELYOS gère le portefeuille de business
         llm=llm,
     )
+
+    from .business.ledger import Ledger
+    ctx.ledger = Ledger(memory, ctx.portfolio)   # le CA affiché = la somme des écritures
 
     # Import local : jarvis.py importe KernelContext pour ses annotations, donc on
     # câble l'instance après coup pour éviter l'import circulaire au chargement.
