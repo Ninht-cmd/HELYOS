@@ -1,0 +1,107 @@
+{
+  "name": "Relance factures impayées — pilote (marque blanche)",
+  "settings": { "executionOrder": "v1", "timezone": "Europe/Paris" },
+  "meta": { "templateCredsSetupCompleted": false },
+  "nodes": [
+    {
+      "id": "note-1",
+      "name": "LISEZ-MOI",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 80],
+      "parameters": {
+        "width": 560, "height": 220,
+        "content": "## Relance de factures impayées — pilote\n\n1. Branchez vos identifiants Google Sheets et SMTP (voir README_CLIENT.md)\n2. Renseignez l'ID de votre feuille « Factures » dans le nœud Google Sheets\n3. Testez avec « Execute Workflow » : les e-mails sont composés mais PAS envoyés\n4. Le nœud « Envoi SMTP » est DÉSACTIVÉ volontairement : activez-le seulement\n   après avoir validé les messages générés sur vos données réelles.\n\nColonnes attendues : client | email | numero_facture | montant_eur | date_echeance | statut | derniere_relance"
+      }
+    },
+    {
+      "id": "trigger-1",
+      "name": "Chaque matin 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 380],
+      "parameters": {
+        "rule": { "interval": [ { "field": "days", "triggerAtHour": 8 } ] }
+      }
+    },
+    {
+      "id": "sheets-read-1",
+      "name": "Lire les factures (Google Sheets)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [420, 380],
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "mode": "id", "value": "REMPLACER_PAR_ID_FEUILLE" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Factures" },
+        "options": {}
+      }
+    },
+    {
+      "id": "code-1",
+      "name": "Filtrer impayées + composer relances",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 380],
+      "parameters": {
+        "jsCode": "// Règles : relance 1 à J+7 après échéance, relance 2 à J+14, relance 3 (mise en demeure amiable) à J+30.\n// Anti-spam : jamais deux relances à moins de 6 jours d'intervalle (colonne derniere_relance).\nconst now = new Date();\nconst DAY = 86400000;\nconst out = [];\nfor (const item of $input.all()) {\n  const f = item.json;\n  if (String(f.statut || '').toLowerCase().includes('pay')) continue;   // payée -> rien\n  if (!f.email || !f.date_echeance) continue;                            // données incomplètes -> rien\n  const due = new Date(f.date_echeance);\n  const late = Math.floor((now - due) / DAY);\n  if (late < 7) continue;\n  const lastR = f.derniere_relance ? new Date(f.derniere_relance) : null;\n  if (lastR && (now - lastR) / DAY < 6) continue;                        // relancé récemment -> attendre\n  const level = late >= 30 ? 3 : late >= 14 ? 2 : 1;\n  const montant = Number(f.montant_eur || 0).toFixed(2);\n  const objets = {\n    1: `Facture ${f.numero_facture} — échéance dépassée`,\n    2: `Relance : facture ${f.numero_facture} (${montant} €) en attente`,\n    3: `Dernier rappel avant mise en demeure — facture ${f.numero_facture}`,\n  };\n  const corps = {\n    1: `Bonjour ${f.client},\\n\\nSauf erreur de notre part, la facture ${f.numero_facture} de ${montant} €, échue le ${f.date_echeance}, reste en attente de règlement.\\n\\nSi le paiement est déjà parti, merci d'ignorer ce message. Sinon, vous trouverez la facture en pièce jointe de notre premier envoi.\\n\\nBien cordialement`,\n    2: `Bonjour ${f.client},\\n\\nMalgré notre précédent message, la facture ${f.numero_facture} de ${montant} € (échue le ${f.date_echeance}) demeure impayée à ce jour (${late} jours de retard).\\n\\nMerci de procéder au règlement sous 7 jours, ou de nous indiquer la difficulté rencontrée — nous trouverons une solution.\\n\\nBien cordialement`,\n    3: `Bonjour ${f.client},\\n\\nLa facture ${f.numero_facture} de ${montant} € est impayée depuis ${late} jours malgré nos relances.\\n\\nSans règlement ou réponse de votre part sous 8 jours, nous serons contraints d'engager une procédure de recouvrement. Nous préférerions sincèrement l'éviter.\\n\\nCordialement`,\n  };\n  out.push({ json: { ...f, jours_retard: late, niveau_relance: level, email_objet: objets[level], email_corps: corps[level] } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "send-1",
+      "name": "Envoi SMTP (DÉSACTIVÉ — activer après validation)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [900, 380],
+      "disabled": true,
+      "parameters": {
+        "fromEmail": "compta@VOTRE-DOMAINE.fr",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.email_objet }}",
+        "text": "={{ $json.email_corps }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "sheets-log-1",
+      "name": "Tracer la relance (journal)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1140, 380],
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "id", "value": "REMPLACER_PAR_ID_FEUILLE" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Journal_relances" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $now.toISO() }}",
+            "client": "={{ $json.client }}",
+            "numero_facture": "={{ $json.numero_facture }}",
+            "montant_eur": "={{ $json.montant_eur }}",
+            "jours_retard": "={{ $json.jours_retard }}",
+            "niveau_relance": "={{ $json.niveau_relance }}"
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "note-2",
+      "name": "Pourquoi l'envoi est désactivé",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [860, 560],
+      "parameters": {
+        "width": 420, "height": 140,
+        "content": "**Sécurité volontaire** : aucun e-mail ne part tant que VOUS n'avez pas\nvalidé les messages générés sur vos vraies données. Exécutez le workflow,\nlisez les sorties du nœud « Filtrer + composer », puis activez l'envoi.\nUn e-mail de relance raté coûte plus cher qu'un jour de retard."
+      }
+    }
+  ],
+  "connections": {
+    "Chaque matin 8h": { "main": [[ { "node": "Lire les factures (Google Sheets)", "type": "main", "index": 0 } ]] },
+    "Lire les factures (Google Sheets)": { "main": [[ { "node": "Filtrer impayées + composer relances", "type": "main", "index": 0 } ]] },
+    "Filtrer impayées + composer relances": { "main": [[ { "node": "Envoi SMTP (DÉSACTIVÉ — activer après validation)", "type": "main", "index": 0 } ]] },
+    "Envoi SMTP (DÉSACTIVÉ — activer après validation)": { "main": [[ { "node": "Tracer la relance (journal)", "type": "main", "index": 0 } ]] }
+  }
+}
