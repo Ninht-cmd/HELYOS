@@ -1,4 +1,4 @@
-# HELYOS — accès réseau LOCAL (ton téléphone, ta tablette, sur TON wifi).
+﻿# HELYOS — accès réseau LOCAL (ton téléphone, ta tablette, sur TON wifi).
 #
 # Ce que ça fait : lance le noyau en écoutant sur toutes les interfaces de TA
 # machine (0.0.0.0) au lieu de seulement localhost, et affiche l'URL à ouvrir
