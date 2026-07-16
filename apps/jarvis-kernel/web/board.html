@@ -4,301 +4,352 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HELYOS — Pilotage</title>
-<!-- PWA / iPhone : « Ajouter à l'écran d'accueil » dans Safari -> app plein écran -->
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="HELYOS">
-<meta name="theme-color" content="#0e1726">
+<meta name="theme-color" content="#14121f">
 <style>
-  /* Poste de pilotage v2. Contrat d'honnêteté inchangé : chaque chiffre vient du
-     noyau (/portfolio, /governance/audit, /events, /connectors). Zéro donnée inventée.
-     Le beau vient du design, jamais de faux chiffres. */
+  /* Pilotage v3 — fidèle à la maquette du fondateur (palette violette, densité,
+     graphiques, assistant intégré, sidebar complète). Contrat inchangé : chaque
+     chiffre vient du noyau. Le design vient de la maquette ; les données, jamais. */
   :root{
-    --bg:#f5f7fa; --card:#ffffff; --ink:#101828; --muted:#667085; --faint:#98a2b3;
-    --line:#eaecf0; --navy:#0e1726; --navy-ink:#cbd5e1;
-    --mint:#10b981; --mint-soft:#d1fae5; --mint-dark:#065f46;
-    --amber:#f59e0b; --amber-soft:#fef3c7;
-    --coral:#ef4444; --coral-soft:#fee2e2;
-    --violet:#8b5cf6; --violet-soft:#ede9fe;
-    --blue:#3b82f6; --blue-soft:#dbeafe;
-    --r:16px; --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
-    --shadow-h:0 4px 12px rgba(16,24,40,.10);
+    --bg:#f6f6fb; --card:#ffffff; --ink:#17151f; --muted:#6b6880; --faint:#9d9ab0;
+    --line:#eceaf4; --navy:#14121f; --navy-ink:#b6b3c9;
+    --vio:#6d5ef0; --vio-d:#5747d6; --vio-soft:#efecfe; --vio-ink:#4231b8;
+    --grad:linear-gradient(135deg,#6d5ef0,#8b5cf6);
+    --mint:#10b981; --mint-soft:#d9f5ea; --mint-ink:#0a6e50;
+    --amber:#f59e0b; --amber-soft:#fdf1d7; --amber-ink:#92580e;
+    --coral:#ef4444; --coral-soft:#fde3e3; --coral-ink:#a11d1d;
+    --blue:#3b82f6; --blue-soft:#e0edfe; --blue-ink:#1d4fa8;
+    --r:16px; --shadow:0 1px 2px rgba(23,21,31,.05),0 2px 6px rgba(23,21,31,.05);
+    --shadow-h:0 6px 18px rgba(109,94,240,.14);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{-webkit-text-size-adjust:100%}
   body{background:var(--bg);color:var(--ink);
     font-family:-apple-system,"Segoe UI",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
-  :focus-visible{outline:2px solid var(--mint);outline-offset:2px;border-radius:6px}
+  :focus-visible{outline:2px solid var(--vio);outline-offset:2px;border-radius:6px}
+  .shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;min-height:100dvh}
 
-  .shell{display:grid;grid-template-columns:246px 1fr;min-height:100vh;min-height:100dvh}
-
-  /* ---- barre latérale ---- */
-  .side{background:var(--navy);color:var(--navy-ink);padding:22px 14px;display:flex;flex-direction:column;gap:2px;
-    padding-bottom:calc(22px + env(safe-area-inset-bottom))}
-  .side .logo{color:#fff;font-weight:800;letter-spacing:2.5px;font-size:18px;padding:0 10px 18px}
-  .side .logo b{color:var(--mint)}
-  .side h3{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:#64748b;padding:14px 10px 6px}
-  .side a.nav{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:13.5px;transition:.2s}
+  /* ================= sidebar (structure de la maquette) ================= */
+  .side{background:var(--navy);color:var(--navy-ink);padding:20px 12px;display:flex;flex-direction:column;gap:1px;
+    overflow-y:auto;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+  .side .logo{display:flex;align-items:center;gap:9px;color:#fff;font-weight:800;letter-spacing:1px;
+    font-size:17px;padding:0 8px 16px}
+  .side .logo .lg{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;
+    place-items:center;font-size:15px;color:#fff}
+  .side h3{font-size:9.5px;text-transform:uppercase;letter-spacing:1.5px;color:#57536e;padding:13px 9px 5px}
+  .side a.nav,.side .soon{display:flex;align-items:center;gap:9px;padding:7.5px 9px;border-radius:9px;
+    font-size:12.8px;transition:.15s}
   .side a.nav:hover{background:rgba(255,255,255,.06);color:#fff}
-  .side a.nav.on{background:var(--mint);color:#04221b;font-weight:600}
-  .side a.nav .b{margin-left:auto;background:var(--coral);color:#fff;font-size:10.5px;font-weight:700;
-    border-radius:99px;padding:1px 7px}
-  .side .soon{padding:9px 10px;font-size:13.5px;color:#475569;display:flex;gap:10px;align-items:center;cursor:not-allowed}
-  .side .soon em{margin-left:auto;font-style:normal;font-size:9.5px;border:1px solid #334155;color:#64748b;
-    border-radius:6px;padding:1px 5px}
-  .side .foot{margin-top:auto;padding:10px;font-size:11px;color:#64748b;line-height:1.5}
+  .side a.nav.on{background:var(--grad);color:#fff;font-weight:600;box-shadow:0 3px 10px rgba(109,94,240,.35)}
+  .side a.nav .b{margin-left:auto;background:var(--coral);color:#fff;font-size:10px;font-weight:700;
+    border-radius:99px;padding:1px 6px}
+  .side .soon{color:#4d4966;cursor:not-allowed}
+  .side .soon em{margin-left:auto;font-style:normal;font-size:9px;border:1px solid #322e49;color:#57536e;
+    border-radius:5px;padding:1px 5px}
+  .side .foot{margin-top:auto;padding:10px 8px 0;font-size:10.5px;color:#57536e;line-height:1.5}
 
-  /* ---- contenu ---- */
-  .main{padding:26px 30px;max-width:1280px;padding-bottom:calc(26px + env(safe-area-inset-bottom))}
-  .head{display:flex;align-items:center;gap:14px;margin-bottom:6px;flex-wrap:wrap}
-  .head h1{font-size:24px;font-weight:750;letter-spacing:-.3px}
-  .head .st{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
+  /* ================= contenu ================= */
+  .main{padding:22px 26px;max-width:1460px;padding-bottom:calc(26px + env(safe-area-inset-bottom))}
+  .head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .head h1{font-size:22px;font-weight:750;letter-spacing:-.3px}
+  .head .st{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
   .head .dot{width:8px;height:8px;border-radius:50%;background:var(--mint)}
   .head .dot.off{background:var(--coral)}
   .head .sp{flex:1}
-  .sub{color:var(--muted);font-size:13.5px;margin-bottom:20px}
-  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--mint);color:#fff;border:0;cursor:pointer;
-    font:inherit;font-weight:600;font-size:13.5px;padding:10px 16px;border-radius:10px;transition:.2s}
-  .btn:hover{filter:brightness(1.07)}
-  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
-  .btn.big{width:100%;justify-content:center;padding:12px}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--grad);color:#fff;border:0;cursor:pointer;
+    font:inherit;font-weight:600;font-size:13px;padding:10px 16px;border-radius:11px;transition:.2s;
+    box-shadow:0 3px 10px rgba(109,94,240,.3)}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .sub{color:var(--muted);font-size:13px;margin:4px 0 18px}
 
-  /* ---- actions rapides (le « beau » de la maquette, sans mensonge) ---- */
-  .quick{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
-  .qa{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);
-    display:flex;flex-direction:column;gap:9px;transition:.2s;position:relative}
-  .qa:hover{box-shadow:var(--shadow-h);transform:translateY(-1px)}
-  .qa .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:18px}
-  .qa .t{font-size:13.5px;font-weight:650}
-  .qa .d{font-size:11.5px;color:var(--muted);line-height:1.4}
-  .qa .arrow{position:absolute;right:14px;bottom:12px;color:var(--faint);font-size:14px;transition:.2s}
-  .qa:hover .arrow{color:var(--mint);transform:translateX(2px)}
-  .qa .badge{position:absolute;top:10px;right:10px;background:var(--coral);color:#fff;font-size:10.5px;
-    font-weight:700;border-radius:99px;padding:1px 7px;display:none}
-  .ic.mint{background:var(--mint-soft);color:var(--mint-dark)}
-  .ic.blue{background:var(--blue-soft);color:#1e40af}
-  .ic.violet{background:var(--violet-soft);color:#5b21b6}
-  .ic.amber{background:var(--amber-soft);color:#92400e}
-  .ic.coral{background:var(--coral-soft);color:#991b1b}
+  /* KPIs — la rangée de la maquette, chiffres du noyau */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;margin-bottom:18px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 15px;box-shadow:var(--shadow)}
+  .kpi .l{font-size:11.5px;color:var(--muted)}
+  .kpi .v{font-size:22px;font-weight:750;margin-top:5px;letter-spacing:-.5px}
+  .kpi .v .u{font-size:13px;color:var(--muted);font-weight:600}
+  .kpi .s{font-size:10.5px;color:var(--faint);margin-top:4px}
+  .kpi.hero{background:var(--grad);border:0;color:#fff}
+  .kpi.hero .l,.kpi.hero .s,.kpi.hero .v .u{color:rgba(255,255,255,.75)}
 
-  /* ---- KPIs ---- */
-  .sect{font-size:15px;font-weight:700;margin:2px 0 12px;display:flex;align-items:baseline;gap:8px}
-  .sect .hint{font-size:11.5px;font-weight:500;color:var(--faint)}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px}
-  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 17px;box-shadow:var(--shadow)}
-  .kpi .l{font-size:12px;color:var(--muted)}
-  .kpi .v{font-size:26px;font-weight:750;margin-top:6px;letter-spacing:-.6px}
-  .kpi .v .u{font-size:14px;color:var(--muted);font-weight:600}
-  .kpi .s{font-size:11px;color:var(--faint);margin-top:5px}
-
-  .grid{display:grid;grid-template-columns:1fr 350px;gap:20px;align-items:start}
-  .col{display:flex;flex-direction:column;gap:20px;min-width:0}
-
+  .grid{display:grid;grid-template-columns:1fr 330px;gap:16px;align-items:start}
+  .col{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .duo{display:grid;grid-template-columns:1.65fr 1fr;gap:16px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
-  .card h2{font-size:14.5px;font-weight:700;padding:16px 18px 0;display:flex;align-items:center;gap:8px}
-  .card h2 em{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.8px;color:var(--mint);
-    background:var(--mint-soft);border-radius:6px;padding:2px 6px;text-transform:uppercase}
-  .card .bd{padding:10px 18px 16px}
-  .empty{font-size:12.5px;color:var(--faint);padding:8px 0}
+  .card h2{font-size:13.5px;font-weight:700;padding:15px 17px 0;display:flex;align-items:center;gap:8px}
+  .card h2 em{font-style:normal;font-size:9px;font-weight:700;letter-spacing:.8px;color:var(--vio-ink);
+    background:var(--vio-soft);border-radius:6px;padding:2px 6px;text-transform:uppercase}
+  .card h2 .r{margin-left:auto}
+  .card .bd{padding:10px 17px 15px}
+  .empty{font-size:12px;color:var(--faint);padding:8px 0}
 
-  /* à faire */
-  .task{display:flex;align-items:flex-start;gap:11px;padding:10px 0;border-bottom:1px solid var(--line)}
-  .task:last-child{border-bottom:0}
-  .task input{width:18px;height:18px;margin-top:2px;accent-color:var(--mint);cursor:pointer;flex:none}
-  .task .t{font-size:13.5px;line-height:1.45}
-  .task .m{font-size:11px;color:var(--faint);margin-top:2px}
-  .task .own{margin-left:auto;flex:none;font-size:10px;font-weight:700;border-radius:6px;padding:2px 7px}
-  .own.humain{background:var(--amber-soft);color:#92400e}
-  .own.helyos{background:var(--mint-soft);color:var(--mint-dark)}
+  /* graphiques */
+  .chart{width:100%;height:190px;display:block}
+  .chart-note{font-size:11px;color:var(--faint);text-align:center;padding:4px 0 2px}
+  .donut-wrap{display:flex;align-items:center;gap:16px;padding:6px 0}
+  .legend{display:flex;flex-direction:column;gap:7px;font-size:12px;min-width:0}
+  .legend span{display:flex;align-items:center;gap:7px;color:var(--muted)}
+  .legend i{width:9px;height:9px;border-radius:3px;flex:none}
+  .legend b{color:var(--ink);margin-left:auto;padding-left:10px}
 
-  /* entreprises — cartes façon maquette, chiffres réels */
-  .biz{display:grid;grid-template-columns:repeat(auto-fill,minmax(225px,1fr));gap:13px;padding:12px 18px 18px}
-  .bz{border:1px solid var(--line);border-radius:14px;padding:14px 15px;display:flex;flex-direction:column;gap:8px;
-    min-width:0;transition:.2s;background:var(--card)}
+  /* assistant IA intégré (la maquette l'a au cœur du dashboard) */
+  .ia-log{display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto;padding:4px 0}
+  .ia-m{font-size:12.5px;line-height:1.5;padding:9px 12px;border-radius:12px;max-width:92%;white-space:pre-wrap}
+  .ia-m.u{background:var(--vio-soft);color:var(--vio-ink);align-self:flex-end;border-bottom-right-radius:4px}
+  .ia-m.h{background:var(--bg);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
+  .ia-row{display:flex;gap:8px;margin-top:9px}
+  .ia-row input{flex:1;border:1px solid var(--line);border-radius:11px;padding:10px 13px;font:13px inherit;outline:0}
+  .ia-row input:focus{border-color:var(--vio)}
+  .ia-row button{flex:none}
+  .ia-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .ia-chips button{background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:5px 11px;
+    font:11.5px inherit;color:var(--muted);cursor:pointer;transition:.15s}
+  .ia-chips button:hover{border-color:var(--vio);color:var(--vio-ink)}
+
+  /* alertes (le Pouls) */
+  .al{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.45;align-items:flex-start}
+  .al:last-child{border-bottom:0}
+  .al .ic{flex:none;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:12px}
+  .al.urgent .ic{background:var(--coral-soft)}
+  .al.note .ic{background:var(--blue-soft)}
+
+  /* grille A→Z */
+  .func{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;padding:12px 17px 17px}
+  .fn{border:1px solid var(--line);border-radius:13px;padding:12px;display:flex;flex-direction:column;gap:7px;
+    transition:.2s;min-height:100px;background:var(--card)}
+  .fn.live{cursor:pointer}
+  .fn.live:hover{box-shadow:var(--shadow-h);transform:translateY(-1px);border-color:#ddd8f8}
+  .fn.off{opacity:.62}
+  .fn .fi{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:15px}
+  .fn .fn-t{font-size:12px;font-weight:650;line-height:1.25}
+  .fn .fs{margin-top:auto;font-size:10px;font-weight:700;border-radius:6px;padding:2px 7px;align-self:flex-start}
+  .fs.actif{background:var(--mint-soft);color:var(--mint-ink)}
+  .fs.partiel{background:var(--amber-soft);color:var(--amber-ink)}
+  .fs.chantier{background:#f1f0f7;color:var(--faint)}
+  .ic.vio{background:var(--vio-soft);color:var(--vio-ink)} .ic.mint{background:var(--mint-soft);color:var(--mint-ink)}
+  .ic.blue{background:var(--blue-soft);color:var(--blue-ink)} .ic.amber{background:var(--amber-soft);color:var(--amber-ink)}
+  .ic.coral{background:var(--coral-soft);color:var(--coral-ink)}
+
+  /* entreprises + tâches (repris, re-teintés) */
+  .biz{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px;padding:12px 17px 17px}
+  .bz{border:1px solid var(--line);border-radius:13px;padding:13px 14px;display:flex;flex-direction:column;gap:8px;
+    transition:.2s;background:var(--card)}
   .bz:hover{box-shadow:var(--shadow-h);transform:translateY(-1px)}
   .bz .top{display:flex;align-items:center;gap:10px}
-  .bz .av{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
-    font-size:16px;font-weight:800;color:#fff}
-  .bz .n{font-size:13.5px;font-weight:650;line-height:1.25}
-  .bz .k{font-size:11px;color:var(--muted);text-transform:capitalize}
-  .bz .stt{font-size:11.5px;color:var(--muted);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;
+  .bz .av{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:15px;color:#fff}
+  .bz .n{font-size:13px;font-weight:650;line-height:1.25}
+  .bz .k{font-size:10.5px;color:var(--muted);text-transform:capitalize}
+  .bz .stt{font-size:11px;color:var(--muted);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;
     -webkit-box-orient:vertical;overflow:hidden}
   .bz .row{display:flex;align-items:center;gap:7px;margin-top:auto;padding-top:7px;border-top:1px dashed var(--line)}
-  .bz .ca{font-size:13px;font-weight:700}
-  .bz .tg{margin-left:auto;font-size:10.5px;color:var(--muted);background:var(--bg);border:1px solid var(--line);
+  .bz .ca{font-size:12.5px;font-weight:700}
+  .bz .tg{margin-left:auto;font-size:10px;color:var(--muted);background:var(--bg);border:1px solid var(--line);
     border-radius:6px;padding:2px 7px}
   .bz.new{border-style:dashed;align-items:center;justify-content:center;text-align:center;color:var(--muted);
-    font-size:12.5px;gap:4px;cursor:pointer;min-height:132px}
-  .bz.new:hover{border-color:var(--mint);color:var(--mint);transform:none;box-shadow:none}
-  .bz.new .plus{font-size:22px;font-weight:300}
+    font-size:12px;gap:4px;cursor:pointer;min-height:120px}
+  .bz.new:hover{border-color:var(--vio);color:var(--vio-ink);transform:none;box-shadow:none}
+  .task{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .task:last-child{border-bottom:0}
+  .task input{width:17px;height:17px;margin-top:2px;accent-color:var(--vio);cursor:pointer;flex:none}
+  .task .t{font-size:12.5px;line-height:1.4}
+  .task .m{font-size:10.5px;color:var(--faint);margin-top:2px}
+  .task .own{margin-left:auto;flex:none;font-size:9.5px;font-weight:700;border-radius:6px;padding:2px 7px}
+  .own.humain{background:var(--amber-soft);color:var(--amber-ink)}
+  .own.helyos{background:var(--vio-soft);color:var(--vio-ink)}
 
-  /* droite : approbations + intégrations + activité */
-  .apr{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  /* rail droit : gouvernance / connecteurs / activité */
+  .pill{flex:none;font-size:9.5px;font-weight:700;border-radius:6px;padding:2px 7px;margin-top:1px}
+  .pill.require_validation{background:var(--amber-soft);color:var(--amber-ink)}
+  .pill.deny,.pill.forbidden,.pill.error{background:var(--coral-soft);color:var(--coral-ink)}
+  .pill.allow,.pill.connected{background:var(--mint-soft);color:var(--mint-ink)}
+  .pill.not_configured{background:#f1f0f7;color:var(--faint)}
+  .apr{display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px}
   .apr:last-child{border-bottom:0}
-  .pill{flex:none;font-size:10px;font-weight:700;border-radius:6px;padding:2px 7px;margin-top:1px}
-  .pill.require_validation{background:var(--amber-soft);color:#92400e}
-  .pill.deny{background:var(--coral-soft);color:#991b1b}
-  .pill.allow,.pill.connected{background:var(--mint-soft);color:var(--mint-dark)}
-  .pill.not_configured{background:#f2f4f7;color:#667085}
-  .pill.forbidden,.pill.error{background:var(--coral-soft);color:#991b1b}
-  .apr .w{margin-left:auto;flex:none;font-size:10.5px;color:var(--faint)}
+  .apr .w{margin-left:auto;flex:none;font-size:10px;color:var(--faint)}
   .apr .d{min-width:0}
   .apr .d .ty{font-weight:650}
-  .apr .d .ds{color:var(--muted);font-size:11.5px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cx{padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .apr .d .ds{color:var(--muted);font-size:11px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gscore{display:flex;align-items:center;gap:14px;padding:6px 0}
+  .gscore .num{font-size:30px;font-weight:800;color:var(--vio-ink)}
+  .gscore .lbl{font-size:11.5px;color:var(--muted);line-height:1.5}
+  .cx{padding:8px 0;border-bottom:1px solid var(--line);font-size:12px}
   .cx:last-child{border-bottom:0}
   .cx .l1{display:flex;align-items:center;gap:8px}
   .cx .l1 b{font-weight:650}
   .cx .l1 .pill{margin-left:auto}
-  .cx .ds{color:var(--muted);font-size:11.5px;margin-top:2px;line-height:1.45}
-  .cx .rq{color:#92400e;font-size:11px;margin-top:2px;font-family:ui-monospace,Consolas,monospace;word-break:break-all}
-  .msg{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px;align-items:flex-start}
+  .cx .ds{color:var(--muted);font-size:11px;margin-top:2px;line-height:1.4}
+  .cx .rq{color:var(--amber-ink);font-size:10.5px;margin-top:2px;font-family:ui-monospace,Consolas,monospace;word-break:break-all}
+  .msg{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px;align-items:flex-start}
   .msg:last-child{border-bottom:0}
-  .msg .ic2{flex:none;width:27px;height:27px;border-radius:9px;background:var(--mint-soft);color:var(--mint-dark);
-    display:grid;place-items:center;font-size:12px;font-weight:800}
-  .msg .tx{line-height:1.45;min-width:0}
-  .msg .tx small{display:block;color:var(--faint);font-size:10.5px;margin-top:1px}
-  .note{font-size:11px;color:var(--faint);line-height:1.55;padding:14px 4px 0}
+  .msg .ic2{flex:none;width:25px;height:25px;border-radius:8px;background:var(--vio-soft);color:var(--vio-ink);
+    display:grid;place-items:center;font-size:11px;font-weight:800}
+  .msg .tx{line-height:1.4;min-width:0}
+  .msg .tx small{display:block;color:var(--faint);font-size:10px;margin-top:1px}
+  .note{font-size:10.5px;color:var(--faint);line-height:1.55;padding:12px 4px 0}
 
-  /* ---- grille A→Z : gérer un business sous tous ses aspects ---- */
-  .func{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px;margin-bottom:22px}
-  .fn{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow);
-    display:flex;flex-direction:column;gap:8px;transition:.2s;position:relative;min-height:112px}
-  .fn.live{cursor:pointer}
-  .fn.live:hover{box-shadow:var(--shadow-h);transform:translateY(-1px)}
-  .fn.soon{opacity:.72}
-  .fn .fi{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:17px}
-  .fn .fn-t{font-size:13px;font-weight:650;line-height:1.25}
-  .fn .fs{margin-top:auto;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 8px;align-self:flex-start}
-  .fs.actif{background:var(--mint-soft);color:var(--mint-dark)}
-  .fs.partiel{background:var(--amber-soft);color:#92400e}
-  .fs.chantier{background:#f2f4f7;color:#667085}
-  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin:-8px 0 20px}
-  .legend span{display:inline-flex;align-items:center;gap:5px}
-  .legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
-
-  /* ---- mobile (iPhone) ---- */
-  @media(max-width:1080px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}
-    .quick{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:1160px){.grid{grid-template-columns:1fr}.duo{grid-template-columns:1fr}}
   @media(max-width:760px){
     .shell{grid-template-columns:1fr}
-    .side{flex-direction:row;align-items:center;gap:6px;padding:10px 12px;overflow-x:auto;position:sticky;top:0;z-index:9}
+    .side{flex-direction:row;align-items:center;gap:5px;padding:10px 12px;overflow-x:auto;position:sticky;top:0;z-index:9}
     .side h3,.side .soon,.side .foot{display:none}
-    .side .logo{padding:0 8px 0 0;font-size:15px}
-    .side a.nav{flex:none;font-size:12.5px;padding:7px 9px}
-    .main{padding:16px 14px}
-    .head h1{font-size:20px}
-    .quick .qa .d{display:none}
-    .biz{grid-template-columns:1fr 1fr}
+    .side .logo{padding:0 6px 0 0;font-size:14px}
+    .side a.nav{flex:none;font-size:12px;padding:7px 9px}
+    .main{padding:14px 13px}
+    .head h1{font-size:19px}
+    .biz{grid-template-columns:1fr}
   }
-  @media(max-width:430px){.kpis{grid-template-columns:repeat(2,1fr)}.biz{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="shell">
   <nav class="side" aria-label="Navigation">
-    <div class="logo"><b>H</b>ELYOS</div>
-    <a class="nav on" href="./board.html">🏠 Pilotage</a>
-    <a class="nav" href="./index.html">💬 Chat</a>
-    <h3>Holding</h3>
+    <div class="logo"><span class="lg">H</span>HELYOS</div>
+    <a class="nav on" href="./board.html">🏠 Tableau de bord</a>
+    <a class="nav" href="./index.html">✨ Assistant IA</a>
+    <h3>Finances</h3>
+    <a class="nav" href="#finances">💶 Trésorerie</a>
+    <a class="nav" href="./index.html">🧾 Facturation & relances</a>
+    <a class="nav" href="./index.html">📈 Investissements</a>
+    <div class="soon">📒 Comptabilité <em>chantier</em></div>
+    <h3>Clients & ventes</h3>
+    <a class="nav" href="./index.html">🎯 Prospection (CRM)</a>
+    <div class="soon">📄 Devis <em>chantier</em></div>
+    <div class="soon">🎧 Support client <em>chantier</em></div>
+    <h3>Opérations</h3>
+    <a class="nav" href="#todo">✅ Projets & tâches <span class="b" id="nb-tasks">0</span></a>
     <a class="nav" href="#entreprises">🏢 Mes entreprises</a>
-    <a class="nav" href="#todo">✅ À faire <span class="b" id="nb-tasks">0</span></a>
+    <div class="soon">📦 Fournisseurs <em>chantier</em></div>
+    <h3>Entreprise</h3>
+    <div class="soon">👥 RH & Paie <em>chantier</em></div>
+    <div class="soon">⚖️ Juridique <em>partiel · Pro</em></div>
+    <div class="soon">🗂 Documents <em>chantier</em></div>
+    <h3>Système</h3>
     <a class="nav" href="#gouv">🛡 Gouvernance <span class="b" id="nb-apr" hidden>0</span></a>
     <a class="nav" href="#integ">🔌 Intégrations</a>
-    <h3>Système</h3>
     <a class="nav" href="/docs">⚙️ API</a>
     <a class="nav" href="https://github.com/Ninht-cmd/HELYOS">📦 Code source</a>
-    <h3>À venir</h3>
-    <div class="soon">📅 Calendrier <em>chantier</em></div>
-    <div class="soon">📊 Rapports <em>chantier</em></div>
-    <div class="foot">Local d'abord · gouvernance A0–A5 · chaque chiffre vient du noyau, rien n'est inventé.</div>
+    <div class="foot">Local d'abord · gouvernance A0–A5 · chaque chiffre vient du noyau — rien n'est inventé.</div>
   </nav>
 
   <main class="main">
     <div class="head">
-      <h1 id="greet">Bonjour 👋</h1>
+      <h1 id="greet">Bonjour, Emeric 👋</h1>
       <span class="st"><span class="dot" id="dot"></span><span id="state">connexion…</span></span>
       <span class="sp"></span>
-      <a class="btn" href="./index.html">💬 Ouvrir le chat HELYOS</a>
+      <a class="btn ghost" href="./index.html">💬 Plein écran</a>
+      <button class="btn" onclick="document.getElementById('ia-in').focus()">✨ Demander à l'IA</button>
     </div>
-    <p class="sub" id="subline">HELYOS est prêt. Que veux-tu faire ?</p>
+    <p class="sub" id="subline">Voici ce qui se passe dans vos entreprises aujourd'hui.</p>
 
-    <div class="quick" aria-label="Actions rapides">
-      <a class="qa" href="./index.html">
-        <span class="ic mint">🚀</span><span class="t">Créer un business</span>
-        <span class="d">dis « crée un business… » dans le chat</span><span class="arrow">→</span></a>
-      <a class="qa" href="#entreprises">
-        <span class="ic blue">📊</span><span class="t">Voir les performances</span>
-        <span class="d">CA et métriques réels du portefeuille</span><span class="arrow">→</span></a>
-      <a class="qa" href="#todo">
-        <span class="ic violet">✅</span><span class="t">Mes tâches</span>
-        <span class="d">ce qui attend une action</span><span class="arrow">→</span>
-        <span class="badge" id="qa-tasks">0</span></a>
-      <a class="qa" href="#gouv">
-        <span class="ic amber">🛡</span><span class="t">Approbations</span>
-        <span class="d">valider les actions importantes</span><span class="arrow">→</span>
-        <span class="badge" id="qa-apr">0</span></a>
-      <a class="qa" href="./index.html">
-        <span class="ic coral">💬</span><span class="t">Demander à HELYOS</span>
-        <span class="d">une question, une analyse, un ordre</span><span class="arrow">→</span></a>
-    </div>
-
-    <div class="sect">Vue d'ensemble <span class="hint">— chaque chiffre vient du noyau, aucun inventé</span></div>
     <div class="kpis">
-      <div class="kpi"><div class="l">Chiffre d'affaires (recettes)</div>
+      <div class="kpi hero"><div class="l">Chiffre d'affaires (recettes)</div>
         <div class="v" id="k-ca">— <span class="u">€</span></div>
         <div class="s" id="k-ca-s">somme des écritures réelles</div></div>
-      <div class="kpi"><div class="l">Trésorerie (solde caisse)</div>
+      <div class="kpi"><div class="l">Trésorerie (solde)</div>
         <div class="v" id="k-cash">— <span class="u">€</span></div>
         <div class="s" id="k-cash-s">recettes − dépenses</div></div>
-      <div class="kpi"><div class="l">Entreprises au portefeuille</div>
+      <div class="kpi"><div class="l">Dépenses</div>
+        <div class="v" id="k-dep">— <span class="u">€</span></div>
+        <div class="s">réelles, tracées</div></div>
+      <div class="kpi"><div class="l">Entreprises</div>
         <div class="v" id="k-biz">—</div><div class="s" id="k-biz-s">&nbsp;</div></div>
       <div class="kpi"><div class="l">Tâches ouvertes</div>
         <div class="v" id="k-tasks">—</div><div class="s">humain + HELYOS</div></div>
       <div class="kpi"><div class="l">Décisions gouvernées</div>
-        <div class="v" id="k-gov">—</div><div class="s">depuis le démarrage du noyau</div></div>
+        <div class="v" id="k-gov">—</div><div class="s">depuis le démarrage</div></div>
     </div>
-
-    <div class="sect">Gérer votre business de A à Z <span class="hint">— l'état réel, pas la brochure</span></div>
-    <div class="legend">
-      <span><i style="background:var(--mint)"></i> actif — utilisable maintenant</span>
-      <span><i style="background:var(--amber)"></i> partiel — socle présent</span>
-      <span><i style="background:#98a2b3"></i> chantier — pas encore construit</span>
-    </div>
-    <div class="func" id="func"></div>
 
     <div class="grid">
       <div class="col">
+
+        <div class="duo" id="finances">
+          <section class="card">
+            <h2>Évolution du CA — 30 jours <em>réel</em></h2>
+            <div class="bd">
+              <svg class="chart" id="chart" viewBox="0 0 600 190" preserveAspectRatio="none" aria-label="Courbe du chiffre d'affaires"></svg>
+              <div class="chart-note" id="chart-note"></div>
+            </div>
+          </section>
+          <section class="card">
+            <h2>Répartition des revenus <em>réel</em></h2>
+            <div class="bd donut-wrap">
+              <svg width="120" height="120" viewBox="0 0 120 120" id="donut" aria-label="Répartition des revenus par entreprise"></svg>
+              <div class="legend" id="donut-legend"><span class="empty">aucun revenu encore</span></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="duo">
+          <section class="card">
+            <h2>✨ Assistant IA HELYOS <em>réel</em></h2>
+            <div class="bd">
+              <div class="ia-log" id="ia-log">
+                <div class="ia-m h">Bonjour Emeric — pose-moi une question ou donne un ordre :
+la gouvernance décide, j'agis, tout est tracé.</div>
+              </div>
+              <div class="ia-row">
+                <input id="ia-in" placeholder="Ex. : encaisse 350 € — services" aria-label="Message à HELYOS"
+                       onkeydown="if(event.key==='Enter')askIA()">
+                <button class="btn" id="ia-btn" onclick="askIA()">➤</button>
+              </div>
+              <div class="ia-chips">
+                <button onclick="quick('bilan de trésorerie')">Bilan de trésorerie</button>
+                <button onclick="quick('qui dois-je relancer ?')">Qui relancer ?</button>
+                <button onclick="quick('où en sont mes business ?')">Mes business</button>
+                <button onclick="quick('quel est le cours du bitcoin ?')">Marché</button>
+              </div>
+            </div>
+          </section>
+          <section class="card">
+            <h2>Alertes & priorités <em>le pouls</em></h2>
+            <div class="bd" id="alerts"><div class="empty">chargement…</div></div>
+          </section>
+        </div>
+
+        <section class="card">
+          <h2>Gérer votre business de A à Z <em>état réel</em></h2>
+          <div class="func" id="func"></div>
+        </section>
+
         <section class="card" id="entreprises">
           <h2>Mes entreprises <em>réel</em></h2>
           <div class="biz" id="biz"></div>
         </section>
+
         <section class="card" id="todo">
-          <h2>À faire — Plan Cash 90 jours <em>réel</em></h2>
+          <h2>Mes tâches prioritaires <em>réel</em></h2>
           <div class="bd" id="tasks"><div class="empty">chargement…</div></div>
         </section>
       </div>
+
       <div class="col">
         <section class="card" id="gouv">
-          <h2>Gouvernance <em>réel</em></h2>
-          <div class="bd" id="apr"><div class="empty">aucune décision pour l'instant</div></div>
+          <h2>🛡 Gouvernance & sécurité <em>réel</em></h2>
+          <div class="bd">
+            <div class="gscore"><span class="num" id="g-count">—</span>
+              <span class="lbl">décisions gouvernées depuis le démarrage —
+              4 règles d'or actives, validation humaine sur tout acte externe ou financier.</span></div>
+            <div id="apr"><div class="empty">aucune décision pour l'instant</div></div>
+          </div>
         </section>
         <section class="card" id="integ">
-          <h2>Intégrations <em>réel</em>
-            <button class="btn ghost" id="syncbtn" style="margin-left:auto;padding:6px 12px;font-size:12px"
-                    onclick="syncNow()">⟳ Synchroniser</button></h2>
+          <h2>🔌 Connecteurs & intégrations <em>réel</em>
+            <button class="btn ghost r" id="syncbtn" style="padding:5px 11px;font-size:11.5px"
+                    onclick="syncNow()">⟳ Sync</button></h2>
           <div class="bd" id="cx"><div class="empty">chargement…</div></div>
         </section>
         <section class="card">
-          <h2>Messages récents <em>réel</em></h2>
+          <h2>Activité en temps réel <em>réel</em></h2>
           <div class="bd" id="msgs"><div class="empty">aucun événement pour l'instant</div></div>
         </section>
-        <a class="btn big" href="./index.html">💬 Ouvrir le chat HELYOS</a>
-        <p class="note">Le CA restera à 0 € tant qu'aucun client n'a payé — c'est précisément l'objet
-        des 90 jours. Les validations se donnent dans le chat ; aucune action externe ne part sans toi (GR-2/GR-7).</p>
+        <p class="note">Fidèle à la maquette du fondateur, à une exception près : ici, aucun chiffre
+        n'est décoratif. Le CA restera à 0 € jusqu'au premier encaissement réel — et c'est sa force.</p>
       </div>
     </div>
   </main>
@@ -311,40 +362,164 @@ const esc = s => String(s).replace(/[&<>"']/g, c =>
 const api = async (u, o) => { const r = await fetch(u, o); if (!r.ok) throw new Error(u+' → '+r.status); return r.json(); };
 const rel = ts => { const s = Math.max(0,(Date.now()/1000)-ts);
   return s<60 ? Math.round(s)+' s' : s<3600 ? Math.round(s/60)+' min' : Math.round(s/3600)+' h'; };
+const fr = n => Number(n||0).toLocaleString('fr-FR');
 const EVENT_FR = {
-  'governance.decided':'Décision de gouvernance tracée', 'action.denied':'Action refusée par la gouvernance',
-  'action.pending_validation':'Action en attente de ta validation', 'invoice.drafted':'Relances de factures rédigées',
-  'scaffold.generated':'Squelette de business généré', 'portfolio.task_done':'Tâche du plan cochée',
-  'connector.synced':'Connecteur synchronisé (métriques réelles)', 'research.finding':'Analyse produite et mémorisée',
+  'governance.decided':'Décision de gouvernance tracée','action.denied':'Action refusée par la gouvernance',
+  'action.pending_validation':'Action en attente de ta validation','invoice.drafted':'Relances de factures rédigées',
+  'scaffold.generated':'Squelette de business généré','portfolio.task_done':'Tâche du plan cochée',
+  'connector.synced':'Connecteur synchronisé','research.finding':'Analyse produite et mémorisée',
+  'ledger.entry':'Écriture de caisse enregistrée','pulse.alert':'Alerte du Pouls','pulse.note':'Note du Pouls',
 };
-// Apparence par type de business — l'icône est cosmétique, les chiffres jamais.
-const KIND_AV = {
-  ecommerce:  { bg:'#95bf47', ch:'🛍' },
-  youtube:    { bg:'#ef4444', ch:'▶' },
-  opensource: { bg:'#0e1726', ch:'⌥' },
-  services:   { bg:'#10b981', ch:'⚙' },
-  saas:       { bg:'#3b82f6', ch:'▣' },
-};
+const KIND_AV = { ecommerce:{bg:'#95bf47',ch:'🛍'}, youtube:{bg:'#ef4444',ch:'▶'},
+  opensource:{bg:'#14121f',ch:'⌥'}, service:{bg:'#6d5ef0',ch:'⚙'}, saas:{bg:'#3b82f6',ch:'▣'} };
+const PALETTE = ['#6d5ef0','#10b981','#f59e0b','#3b82f6','#ef4444','#8b5cf6'];
+
 const hr = new Date().getHours();
 $('#greet').textContent = (hr<6?'Bonne nuit':hr<18?'Bonjour':'Bonsoir') + ', Emeric 👋';
 $('#subline').textContent = new Date().toLocaleDateString('fr-FR',
-  { weekday:'long', day:'numeric', month:'long' }) + ' — HELYOS est prêt. Que veux-tu faire ?';
+  { weekday:'long', day:'numeric', month:'long' }) + " — voici ce qui se passe dans vos entreprises.";
 
 function setOnline(ok){ $('#dot').classList.toggle('off',!ok);
   $('#state').textContent = ok ? 'noyau local · gouvernance active' : 'noyau hors ligne'; }
-function setBadge(id, n){ const el = $(id); el.textContent = n; el.style.display = n>0 ? 'block' : 'none'; }
 
+/* ---------- finances : caisse réelle + graphiques branchés dessus ---------- */
+async function loadLedger(){
+  const g = await api('/ledger');
+  $('#k-cash').innerHTML = `${fr(g.solde_eur)} <span class="u">€</span>`;
+  $('#k-ca').innerHTML   = `${fr(g.recettes_eur)} <span class="u">€</span>`;
+  $('#k-dep').innerHTML  = `${fr(g.depenses_eur)} <span class="u">€</span>`;
+  $('#k-ca-s').textContent = g.par_business.length ? 'somme des écritures réelles' : 'objectif : 1er euro avant J30';
+  $('#k-cash-s').textContent = g.par_business.length
+    ? `${fr(g.recettes_eur)} € in · ${fr(g.depenses_eur)} € out`
+    : 'aucune écriture — dis « encaisse … »';
+
+  // toutes les écritures (par business) pour la courbe
+  let entries = [];
+  for (const s of g.par_business) {
+    try { const d = await api('/ledger?business=' + encodeURIComponent(s.business));
+          entries = entries.concat(d.dernieres_ecritures || []); } catch(_){}
+  }
+  drawChart(entries);
+  drawDonut(g.par_business);
+}
+
+function drawChart(entries){
+  const svg = $('#chart'); const W=600, H=190, P=14;
+  const days = 30, now = Date.now()/1000, DAY=86400;
+  const daily = new Array(days).fill(0);
+  for (const e of entries) {
+    if (e.kind !== 'recette') continue;
+    const idx = Math.floor((now - e.ts) / DAY);
+    if (idx >= 0 && idx < days) daily[days-1-idx] += e.amount_eur;
+  }
+  let cum = 0; const pts = daily.map(v => (cum += v));
+  const max = Math.max(cum, 1);
+  const x = i => P + i*(W-2*P)/(days-1);
+  const y = v => H-P - v*(H-2*P)/max;
+  const line = pts.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const area = `${line} L${x(days-1)},${H-P} L${x(0)},${H-P} Z`;
+  svg.innerHTML = `
+    <defs><linearGradient id="gA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6d5ef0" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#6d5ef0" stop-opacity="0"/></linearGradient></defs>
+    ${[0.25,0.5,0.75].map(f=>`<line x1="${P}" x2="${W-P}" y1="${(H-2*P)*f+P}" y2="${(H-2*P)*f+P}"
+      stroke="#eceaf4" stroke-width="1"/>`).join('')}
+    <path d="${area}" fill="url(#gA)"/>
+    <path d="${line}" fill="none" stroke="#6d5ef0" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="${x(days-1)}" cy="${y(cum)}" r="4" fill="#6d5ef0"/>`;
+  $('#chart-note').textContent = cum > 0
+    ? `${fr(cum)} € encaissés sur 30 jours — courbe issue du livre de caisse`
+    : 'La courbe naîtra avec la première écriture réelle. Elle ne sera jamais décorative.';
+}
+
+function drawDonut(per){
+  const svg = $('#donut'), R=48, C=2*Math.PI*R, cx=60, cy=60;
+  const total = per.reduce((t,s)=>t+s.recettes_eur, 0);
+  if (!total) {
+    svg.innerHTML = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#eceaf4" stroke-width="14"/>
+      <text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="13" font-weight="700" fill="#9d9ab0">0 €</text>`;
+    $('#donut-legend').innerHTML = '<span class="empty">aucun revenu encore — la répartition suivra la caisse</span>';
+    return;
+  }
+  let off = 0, segs = '', leg = '';
+  per.filter(s=>s.recettes_eur>0).forEach((s,i)=>{
+    const frac = s.recettes_eur/total, col = PALETTE[i%PALETTE.length];
+    segs += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${col}" stroke-width="14"
+      stroke-dasharray="${(frac*C).toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-off*C).toFixed(1)}"
+      transform="rotate(-90 ${cx} ${cy})"/>`;
+    leg += `<span><i style="background:${col}"></i>${esc(s.business.slice(0,26))}<b>${fr(s.recettes_eur)} €</b></span>`;
+    off += frac;
+  });
+  svg.innerHTML = segs + `<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="12"
+    font-weight="750" fill="#17151f">${fr(total)} €</text>`;
+  $('#donut-legend').innerHTML = leg;
+}
+
+/* ---------- assistant IA intégré ---------- */
+let iaBusy = false;
+function quick(q){ $('#ia-in').value = q; askIA(); }
+async function askIA(){
+  const q = $('#ia-in').value.trim();
+  if (!q || iaBusy) return;
+  iaBusy = true; $('#ia-btn').disabled = true; $('#ia-in').value = '';
+  const log = $('#ia-log');
+  log.insertAdjacentHTML('beforeend', `<div class="ia-m u">${esc(q)}</div>`);
+  log.insertAdjacentHTML('beforeend', `<div class="ia-m h" id="ia-wait">HELYOS réfléchit…</div>`);
+  log.scrollTop = log.scrollHeight;
+  try {
+    const r = await api('/jarvis', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ message: q }) });
+    $('#ia-wait').textContent = r.text;
+    refresh();                                  // le dashboard réagit aux actions
+  } catch(e) { $('#ia-wait').textContent = 'Le noyau n\'a pas répondu — réessaie.'; }
+  finally { iaBusy = false; $('#ia-btn').disabled = false; log.scrollTop = log.scrollHeight; }
+}
+
+/* ---------- alertes du Pouls ---------- */
+async function loadAlerts(){
+  const b = await api('/pulse/briefing');
+  $('#alerts').innerHTML = b.items.length ? b.items.map(i=>`
+    <div class="al ${i.urgent?'urgent':'note'}">
+      <span class="ic">${i.urgent?'⚠️':'📍'}</span><span>${esc(i.text)}</span>
+    </div>`).join('')
+    : '<div class="empty">rien à signaler — le silence signifie que tout fonctionne.</div>';
+}
+
+/* ---------- grille A→Z (états honnêtes, alignés RFC) ---------- */
+const FUNCTIONS = [
+  { t:'Créer un business', ic:'🚀', c:'vio',  st:'actif',   go:'./index.html' },
+  { t:'Prospection & ventes', ic:'🎯', c:'blue', st:'actif', go:'./index.html' },
+  { t:'Facturation & relances', ic:'🧾', c:'mint', st:'actif', go:'./index.html' },
+  { t:'Trésorerie & caisse', ic:'💶', c:'vio',  st:'actif',  go:'#finances' },
+  { t:'Pilotage & KPI', ic:'📊', c:'blue',      st:'actif',  go:'#entreprises' },
+  { t:'Gouvernance & audit', ic:'🛡', c:'amber', st:'actif',  go:'#gouv' },
+  { t:'Recherche & veille', ic:'🔎', c:'vio',   st:'actif',  go:'./index.html' },
+  { t:'Intégrations', ic:'🔌', c:'blue',        st:'actif',  go:'#integ' },
+  { t:'Investissements', ic:'📈', c:'amber',    st:'partiel', go:'./index.html' },
+  { t:'Juridique', ic:'⚖️', c:'vio',            st:'partiel', go:null },
+  { t:'Conformité (RGPD)', ic:'🔒', c:'blue',   st:'partiel', go:null },
+  { t:'Comptabilité légale', ic:'📒', c:'mint', st:'chantier', go:null },
+  { t:'Fournisseurs', ic:'📦', c:'amber',       st:'chantier', go:null },
+  { t:'RH & Paie', ic:'👥', c:'coral',          st:'chantier', go:null },
+  { t:'Marketing', ic:'📣', c:'vio',            st:'chantier', go:null },
+  { t:'Documents', ic:'🗂', c:'blue',           st:'chantier', go:null },
+];
+$('#func').innerHTML = FUNCTIONS.map(f => {
+  const live = f.st !== 'chantier' && f.go;
+  const tag = live ? 'a' : 'div';
+  return `<${tag} class="fn ${live?'live':'off'}"${live?` href="${f.go}"`:''}>
+    <span class="fi ic ${f.c}">${f.ic}</span><span class="fn-t">${esc(f.t)}</span>
+    <span class="fs ${f.st}">${f.st}</span></${tag}>`;
+}).join('');
+
+/* ---------- portefeuille / tâches / gouvernance / connecteurs / activité ---------- */
 async function loadPortfolio(){
   const biz = await api('/portfolio/detail');
-  const ca = biz.reduce((t,b)=>t + Number(b.metrics.revenue_eur ?? b.metrics.revenu_direct_eur ?? 0), 0);
-  $('#k-ca').innerHTML = `${ca.toLocaleString('fr-FR')} <span class="u">€</span>`;
-  $('#k-ca-s').textContent = ca === 0 ? 'objectif : 1er euro avant J30' : 'réel, depuis le portefeuille';
   $('#k-biz').textContent = biz.length;
   $('#k-biz-s').textContent = biz.filter(b=>/actif|prêt|construit|public|Plan Cash/i.test(b.status)).length + ' en préparation active';
   const open = biz.flatMap(b=>b.tasks.filter(t=>!t.done));
   $('#k-tasks').textContent = open.length;
   $('#nb-tasks').textContent = open.length;
-  setBadge('#qa-tasks', open.length);
 
   $('#tasks').innerHTML = open.length ? biz.flatMap(b =>
     b.tasks.filter(t=>!t.done).map(t => {
@@ -353,42 +528,42 @@ async function loadPortfolio(){
       return `<div class="task">
         <input type="checkbox" aria-label="Marquer comme faite : ${label}"
                onchange="doneTask('${esc(b.name).replace(/'/g,"\\'")}','${esc(t.task.slice(0,30)).replace(/'/g,"\\'")}',this)">
-        <div><div class="t">${label}</div><div class="m">${esc(b.name)}</div></div>
+        <div><div class="t">${label}${t.due?` <b style="color:var(--coral-ink)">· ${esc(t.due)}</b>`:''}</div>
+        <div class="m">${esc(b.name)}</div></div>
         <span class="own ${owner}">${owner==='helyos'?'HELYOS':'TOI'}</span>
       </div>`;})
   ).join('') : '<div class="empty">tout est fait — le silence signifie que tout fonctionne.</div>';
 
   $('#biz').innerHTML = biz.map(b => {
     const rev = Number(b.metrics.revenue_eur ?? b.metrics.revenu_direct_eur ?? 0);
-    const av = KIND_AV[(b.kind||'').toLowerCase()] || { bg:'#667085', ch:(b.name||'H')[0].toUpperCase() };
+    const av = KIND_AV[(b.kind||'').toLowerCase()] || { bg:'#6b6880', ch:(b.name||'H')[0].toUpperCase() };
     return `<div class="bz">
       <div class="top"><span class="av" style="background:${av.bg}">${av.ch}</span>
         <div><div class="n" title="${esc(b.name)}">${esc(b.name)}</div>
         <div class="k">${esc(b.kind)}</div></div></div>
       <div class="stt">${esc(b.status)}</div>
-      <div class="row"><span class="ca">CA : ${rev.toLocaleString('fr-FR')} €</span>
+      <div class="row"><span class="ca">CA : ${fr(rev)} €</span>
         <span class="tg">${Number(b.open_tasks)||0} tâche(s)</span></div>
     </div>`;
   }).join('') + `<a class="bz new" href="./index.html">
-    <span class="plus">＋</span><b>Nouvelle entreprise</b>
-    <span>dis « crée un business… »<br>dans le chat</span></a>`;
+    <span style="font-size:20px">＋</span><b>Nouvelle entreprise</b>
+    <span>dis « crée un business… »<br>à l'assistant</span></a>`;
 }
 
 async function loadGov(){
   const entries = await api('/governance/audit?limit=6');
   $('#k-gov').textContent = entries.length ? entries.length + (entries.length >= 6 ? '+' : '') : '0';
+  $('#g-count').textContent = entries.length ? entries.length + (entries.length >= 6 ? '+' : '') : '0';
   const pend = entries.filter(e=>e.decision==='require_validation').length;
   $('#nb-apr').hidden = pend === 0; $('#nb-apr').textContent = pend;
-  setBadge('#qa-apr', pend);
-  if (entries.length)
-    $('#apr').innerHTML = entries.slice().reverse().map(e=>`
-      <div class="apr">
-        <span class="pill ${esc(e.decision)}">${esc(e.decision==='require_validation'?'à valider':e.decision==='deny'?'refusé':'autorisé')}</span>
-        <div class="d"><div class="ty">${esc(e.action_type)}${e.rule?' · '+esc(e.rule):''}</div>
-        <div class="ds">${esc(e.action_description||'')}</div></div>
-        <span class="w">il y a ${rel(e.ts)}</span>
-      </div>`).join('');
-  else $('#apr').innerHTML = '<div class="empty">aucune décision pour l\'instant — demande une action dans le chat.</div>';
+  $('#apr').innerHTML = entries.length ? entries.slice().reverse().map(e=>`
+    <div class="apr">
+      <span class="pill ${esc(e.decision)}">${esc(e.decision==='require_validation'?'à valider':e.decision==='deny'?'refusé':'autorisé')}</span>
+      <div class="d"><div class="ty">${esc(e.action_type)}${e.rule?' · '+esc(e.rule):''}</div>
+      <div class="ds">${esc(e.action_description||'')}</div></div>
+      <span class="w">il y a ${rel(e.ts)}</span>
+    </div>`).join('')
+    : '<div class="empty">aucune décision pour l\'instant — demande une action à l\'assistant.</div>';
 }
 
 async function loadEvents(){
@@ -405,7 +580,7 @@ async function loadConnectors(){
   const cx = await api('/connectors');
   $('#cx').innerHTML = cx.map(c=>`
     <div class="cx">
-      <div class="l1"><b>${esc(c.name)}</b><span style="color:var(--faint);font-size:11px">${esc(c.kind)}</span>
+      <div class="l1"><b>${esc(c.name)}</b><span style="color:var(--faint);font-size:10.5px">${esc(c.kind)}</span>
         <span class="pill ${esc(c.status)}">${esc(CX_LABEL[c.status]||c.status)}</span></div>
       ${c.detail ? `<div class="ds">${esc(c.detail)}</div>` : ''}
       ${c.requires ? `<div class="rq">requiert : ${esc(c.requires)}</div>` : ''}
@@ -413,14 +588,14 @@ async function loadConnectors(){
 }
 
 async function syncNow(){
-  const btn = $('#syncbtn'); btn.disabled = true; btn.textContent = '⟳ en cours…';
+  const btn = $('#syncbtn'); btn.disabled = true; btn.textContent = '⟳ …';
   try {
     const r = await api('/connectors/sync', { method:'POST' });
     const ok = r.results.filter(x=>x.ok).map(x=>x.name);
-    btn.textContent = ok.length ? `✓ ${ok.join(', ')}` : '✓ rien à synchroniser';
+    btn.textContent = ok.length ? `✓ ${ok.join(', ')}` : '✓ à jour';
     await refresh();
   } catch (e) { btn.textContent = '⚠ échec'; }
-  finally { setTimeout(()=>{ btn.disabled = false; btn.textContent = '⟳ Synchroniser'; }, 2500); }
+  finally { setTimeout(()=>{ btn.disabled = false; btn.textContent = '⟳ Sync'; }, 2500); }
 }
 
 async function doneTask(business, prefix, box){
@@ -433,54 +608,11 @@ async function doneTask(business, prefix, box){
   } catch (e) { box.checked = false; box.disabled = false; alert('Le noyau n\'a pas pu pointer la tâche : '+e.message); }
 }
 
-async function loadLedger(){
-  try {
-    const g = await api('/ledger');
-    const solde = Number(g.solde_eur || 0);
-    $('#k-cash').innerHTML = `${solde.toLocaleString('fr-FR')} <span class="u">€</span>`;
-    $('#k-cash-s').textContent = g.par_business && g.par_business.length
-      ? `${g.recettes_eur.toLocaleString('fr-FR')} € in · ${g.depenses_eur.toLocaleString('fr-FR')} € out`
-      : 'aucune écriture — dis « encaisse … » au 1er paiement';
-  } catch (_) { $('#k-cash').innerHTML = '0 <span class="u">€</span>'; }
-}
-
-// La carte A→Z. `st` est l'état HONNÊTE (actif/partiel/chantier), aligné sur les RFC.
-// Un « chantier » le dit ; on ne peint pas une fonction en vert avant qu'elle existe.
-const FUNCTIONS = [
-  { t:'Créer un business', ic:'🚀', c:'mint',   st:'actif',    go:'./index.html' },
-  { t:'Prospection & ventes', ic:'🎯', c:'blue', st:'actif',   go:'./index.html' },
-  { t:'Facturation & relances', ic:'🧾', c:'violet', st:'actif', go:'./index.html' },
-  { t:'Trésorerie & caisse', ic:'💶', c:'mint',  st:'actif',    go:'./index.html' },
-  { t:'Pilotage & KPI', ic:'📊', c:'blue',       st:'actif',    go:'#entreprises' },
-  { t:'Gouvernance & audit', ic:'🛡', c:'amber',  st:'actif',   go:'#gouv' },
-  { t:'Recherche & veille', ic:'🔎', c:'violet',  st:'actif',   go:'./index.html' },
-  { t:'Intégrations', ic:'🔌', c:'blue',          st:'actif',   go:'#integ' },
-  { t:'Investissements', ic:'📈', c:'amber',      st:'partiel', go:'./index.html' },
-  { t:'Juridique', ic:'⚖️', c:'violet',           st:'partiel', go:null },
-  { t:'Conformité (RGPD)', ic:'🔒', c:'blue',     st:'partiel', go:null },
-  { t:'Comptabilité légale', ic:'📒', c:'mint',   st:'chantier', go:null },
-  { t:'Fournisseurs', ic:'📦', c:'amber',         st:'chantier', go:null },
-  { t:'RH & Paie', ic:'👥', c:'coral',            st:'chantier', go:null },
-  { t:'Marketing', ic:'📣', c:'violet',           st:'chantier', go:null },
-  { t:'Documents', ic:'🗂', c:'blue',             st:'chantier', go:null },
-];
-function renderFunctions(){
-  $('#func').innerHTML = FUNCTIONS.map(f => {
-    const live = f.st !== 'chantier' && f.go;
-    const tag = live ? 'a' : 'div';
-    const href = live ? ` href="${f.go}"` : '';
-    return `<${tag} class="fn ${live ? 'live' : 'soon'}"${href}>
-      <span class="fi ic ${f.c}">${f.ic}</span>
-      <span class="fn-t">${esc(f.t)}</span>
-      <span class="fs ${f.st}">${f.st}</span>
-    </${tag}>`;
-  }).join('');
-}
-renderFunctions();
-
 async function refresh(){
-  try { await Promise.all([loadPortfolio(), loadLedger(), loadGov(), loadEvents(), loadConnectors()]); setOnline(true); }
-  catch (e) { setOnline(false); }
+  try {
+    await Promise.all([loadPortfolio(), loadLedger(), loadGov(), loadEvents(), loadConnectors(), loadAlerts()]);
+    setOnline(true);
+  } catch (e) { setOnline(false); }
 }
 refresh();
 setInterval(()=>{ if (document.visibilityState==='visible') refresh(); }, 8000);
