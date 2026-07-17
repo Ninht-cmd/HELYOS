@@ -23,3 +23,4 @@ Un **ADR** capture une décision technique structurante : le **contexte**, la **
 | [0008](ADR-0008-open-core-business-model.md) | Modèle économique : **Open Core** | Accepted |
 | [0009](ADR-0009-conformite-legale.md) | Conformité légale & PI (marques, CLA, disclaimers, RGPD) | Accepted |
 | [0010](ADR-0010-integration-stack-self-hosted.md) | Intégration stack self-hosted (Coolify/Dify/Crawl4AI/Stirling ; trading & multi-repo évités) | Accepted |
+| [0011](ADR-0011-stark-corps-helyos-cerveau.md) | STARK = le corps (shell/HUD), HELYOS = le cerveau gouverné (pont JARVIS→/jarvis) | Accepted |
