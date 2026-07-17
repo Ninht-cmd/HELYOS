@@ -5,7 +5,8 @@
 # fond, comme un launcher) — pour l'arrêter : .\scripts\arreter.ps1
 $ErrorActionPreference = "SilentlyContinue"
 $repo = Split-Path $PSScriptRoot -Parent
-$url  = "http://127.0.0.1:8080/app/"
+# ouvre le COCKPIT relié (HELYOS x STARK x JARVIS) ; ?v= casse le cache du navigateur
+$url  = "http://127.0.0.1:8080/app/cockpit.html?v=" + (Get-Date -Format "yyyyMMddHHmm")
 
 function Test-Kernel {
     try { (Invoke-WebRequest -Uri "http://127.0.0.1:8080/health" -TimeoutSec 2 -UseBasicParsing).StatusCode -eq 200 }
