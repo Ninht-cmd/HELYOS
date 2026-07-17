@@ -15,7 +15,10 @@ function Test-Kernel {
 
 # 1) noyau : démarrer en arrière-plan (sans console) s'il ne répond pas déjà
 if (-not (Test-Kernel)) {
-    $env:HELYOS_LLM_BACKEND = "ollama"   # hérité par le processus enfant (PS 5.1 compatible)
+    $env:HELYOS_LLM_BACKEND = "ollama"          # hérité par le processus enfant (PS 5.1 compatible)
+    # PERSISTANCE : sans ça, tout s'efface au redémarrage (business, caisse, prospects).
+    $env:HELYOS_MEMORY_BACKEND = "sqlite"
+    $env:HELYOS_MEMORY_PATH = Join-Path $repo "helyos_data.sqlite"
     Start-Process -WindowStyle Hidden -WorkingDirectory $repo -FilePath "python" -ArgumentList @(
         "-m","uvicorn","jarvis_kernel.main:app",
         "--app-dir","apps/jarvis-kernel/src","--host","127.0.0.1","--port","8080"

@@ -54,6 +54,16 @@ class TestClassification(unittest.TestCase):
         names = [i.key for i in self.j.ctx.memory.all("business")]
         self.assertGreaterEqual(len(set(names)), 2)
 
+    def test_generated_business_enters_portfolio(self) -> None:
+        # générer ET gérer : le business scaffolder apparaît dans le portefeuille
+        before = len(self.j.ctx.portfolio.list())
+        r = self.j.handle("crée un business de coques personnalisées")
+        self.assertEqual(r.intent, "creer_business")
+        self.assertEqual(len(self.j.ctx.portfolio.list()), before + 1)
+        added = [b for b in self.j.ctx.portfolio.list() if "coques" in b.name.lower()]
+        self.assertEqual(len(added), 1)
+        self.assertGreater(added[0].open_tasks, 0)   # tâches humaines pour le lancer
+
 
 class TestGovernedActions(unittest.TestCase):
     def setUp(self) -> None:

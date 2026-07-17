@@ -182,16 +182,33 @@ class Jarvis:
 
     def _business(self, message: str, granted: AutonomyLevel) -> JarvisReply:
         agent = BusinessScaffolder(llm=self.llm)
-        # Nom dérivé de la demande : deux créations successives ne s'écrasent pas en mémoire.
-        name = f"Business — {message.strip()[:48]}" if message.strip() else "Nouveau business"
+        # Nom propre dérivé de la demande : on retire « crée un business de/d' » et on
+        # capitalise ; deux créations distinctes ne s'écrasent pas en mémoire.
+        niche = re.sub(r"^\s*(cr[ée]e[rz]?|lance[rz]?|nouve(?:au|lle))\b[^,]*?\b(business|boutique)\b\s*(de\s+|d['’]\s*)?",
+                       "", message.strip(), flags=re.IGNORECASE).strip(" .'\"’")
+        niche = niche or message.strip()
+        name = (niche[:1].upper() + niche[1:48]) if niche else "Nouveau business"
         v, plan = agent.scaffold(self.ctx.governance, name=name,
                                  niche=message, granted=granted, memory=self.ctx.memory)
         if plan is None:
             return JarvisReply("creer_business",
                 "Il me faut le niveau A1 pour préparer un business.", True, v.decision.value, v.rule)
+        # générer ET gérer : le business généré entre dans le portefeuille (persisté),
+        # visible au board/cockpit, avec ses tâches humaines — il n'est plus un plan orphelin.
+        from .business.portfolio import Business
+        if self.ctx.portfolio.get(name) is None:
+            self.ctx.portfolio.register(Business(
+                name=name, kind="ecommerce",
+                status=f"généré par HELYOS — squelette prêt ({len(plan.products)} produits)",
+                tasks=[{"task": "[HUMAIN] Choisir la plateforme (Shopify/Etsy) et créer le compte", "done": False, "owner": "humain"},
+                       {"task": "[HUMAIN] Brancher un moyen de paiement (Stripe)", "done": False, "owner": "humain"},
+                       {"task": "[GOUVERNÉ A2] Publier les produits (validation requise)", "done": False, "owner": "helyos"}]))
+            self.ctx.bus.emit("business.generated", business=name, products=len(plan.products))
         return JarvisReply("creer_business",
-            f"J'ai scaffolder un business ({len(plan.products)} produits, {len(plan.required_pages)} "
-            "pages). Le publier sur une plateforme réelle exigera ta validation.", True, v.decision.value)
+            f"J'ai généré un business : « {name} » ({len(plan.products)} produits, "
+            f"{len(plan.required_pages)} pages). Il est maintenant dans ton portefeuille (persisté) "
+            "et je le gère. Le publier sur une plateforme réelle exigera ta validation (GR-2).",
+            True, v.decision.value)
 
     def _research(self, message: str, granted: AutonomyLevel) -> JarvisReply:
         agent = ResearchAgent(llm=self.llm)
