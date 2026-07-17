@@ -58,6 +58,73 @@ def health(request: Request) -> HealthResponse:
     return HealthResponse(status="ok", app=cfg.app_name, version=cfg.version)
 
 
+def _probe(url: str, timeout: float = 1.5) -> tuple[bool, dict]:
+    """Sonde HTTP côté serveur (évite le CORS navigateur). Rend (ok, json|{})."""
+    import json as _json
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as r:  # noqa: S310 (URL locale de config)
+            if r.status != 200:
+                return False, {}
+            try:
+                return True, _json.loads(r.read().decode("utf-8"))
+            except Exception:
+                return True, {}
+    except Exception:
+        return False, {}
+
+
+@router.get("/cockpit/topology", tags=["cockpit"])
+def cockpit_topology(request: Request) -> dict:
+    """État RÉEL du triptyque HELYOS ⇄ STARK ⇄ JARVIS + moteur LLM (Ollama).
+
+    HELYOS est le hub : il sonde lui-même les autres services (pas le navigateur),
+    ce qui contourne le CORS et fait de ce noyau le vrai point de liaison.
+    Rien n'est inventé : un service éteint est marqué 'offline', pas 'standby'.
+    """
+    import os
+
+    ctx = _ctx(request)
+    stark_url = os.environ.get("STARK_JARVIS_URL", "http://127.0.0.1:4242")
+    ollama_url = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
+
+    # HELYOS : c'est nous — si on répond, on est en ligne.
+    helyos = {"status": "online", "version": ctx.settings.version,
+              "agents": len(ctx.registry), "decisions": len(ctx.governance.audit)}
+
+    # STARK / JARVIS : le pont FastAPI du module JARVIS (ADR-0011) expose /health.
+    stark_ok, stark_data = _probe(stark_url + "/health")
+    stark = {"status": "online" if stark_ok else "offline",
+             "helyos_link": stark_data.get("helyos", "?") if stark_ok else "—",
+             "url": stark_url}
+
+    # Moteur LLM local : Ollama (:11434/api/tags liste les modèles).
+    oll_ok, oll_data = _probe(ollama_url + "/api/tags")
+    models = len(oll_data.get("models", [])) if oll_ok else 0
+    engines = {"status": "online" if oll_ok else "offline", "models": models,
+               "backend": ctx.settings.llm_backend}
+
+    # Readiness = mélange PONDÉRÉ et transparent de ce qui est réellement joignable.
+    parts = {"helyos": 100, "stark": 100 if stark_ok else 0,
+             "engines": 100 if oll_ok else 0,
+             "modules": min(100, round(len(ctx.registry) / 7 * 100))}
+    weights = {"helyos": 0.35, "stark": 0.25, "engines": 0.25, "modules": 0.15}
+    score = round(sum(parts[k] * weights[k] for k in parts))
+
+    # Autopilot = part des actions passées SANS validation humaine (allow) vs bloquées.
+    audit = ctx.governance.audit.tail(50)
+    allowed = sum(1 for e in audit if e.decision == "allow")
+    blocked = sum(1 for e in audit if e.decision in ("deny", "require_validation"))
+    total = allowed + blocked
+    autopilot = {"ready": allowed, "blocked": blocked,
+                 "pct": round(allowed / total * 100) if total else 0}
+
+    return {"helyos": helyos, "stark": stark, "jarvis": stark,  # JARVIS = le pont STARK
+            "engines": engines, "readiness": {"score": score, "parts": parts},
+            "autopilot": autopilot}
+
+
 @router.get("/agents", response_model=list[AgentInfo], tags=["agents"])
 def list_agents(request: Request) -> list[AgentInfo]:
     return [AgentInfo(**a.describe()) for a in _ctx(request).registry.list()]

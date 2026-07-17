@@ -130,6 +130,21 @@ class TestApi(unittest.TestCase):
         self.assertGreaterEqual(len(hist), 2)
         self.assertEqual(hist[-1]["role"], "helyos")
 
+    def test_cockpit_topology_shape_and_honesty(self):
+        r = self.client.get("/cockpit/topology")
+        self.assertEqual(r.status_code, 200)
+        t = r.json()
+        # HELYOS se répond à lui-même : toujours online quand l'API tourne
+        self.assertEqual(t["helyos"]["status"], "online")
+        # structure attendue par le cockpit
+        for k in ("stark", "jarvis", "engines", "readiness", "autopilot"):
+            self.assertIn(k, t)
+        self.assertIn(t["stark"]["status"], ("online", "offline"))
+        self.assertTrue(0 <= t["readiness"]["score"] <= 100)
+        # readiness est un mélange pondéré : HELYOS (35%) présent -> jamais 0
+        self.assertGreaterEqual(t["readiness"]["score"], 35)
+        self.assertEqual(set(t["autopilot"]), {"ready", "blocked", "pct"})
+
     def test_connectors_map_is_honest(self):
         r = self.client.get("/connectors")
         self.assertEqual(r.status_code, 200)
