@@ -34,5 +34,7 @@ Draft  →  In Review  →  Accepted  →  (donne lieu à ADR / implémentation)
 | [0012](RFC-0012-le-vrai-jarvis.md) | Le vrai Jarvis : le Pouls (proactivité), la Voix, la Mémoire | Accepted |
 | [0013](RFC-0013-simulation-trading.md) | Trading en simulation — argent fictif, prix réels, P&L honnête | Accepted |
 | [0014](RFC-0014-dossier-business.md) | Dossier Business — livre de caisse + échéances (gérer de A à Z) | Accepted |
+| [0015](RFC-0015-produits-plutot-que-prospection.md) | Devenir pros par ce qu'on crée — produits plutôt que prospection | Accepted |
+| [0016](RFC-0016-jarvis-local-rtx.md) | Le Jarvis local : RTX 5070 Ti — cerveau 14b (fait), voix Parakeet/Kokoro (chantier) | Accepted |
 
 Gabarit : [`_template.md`](_template.md).

@@ -16,6 +16,11 @@ function Test-Kernel {
 # 1) noyau : démarrer en arrière-plan (sans console) s'il ne répond pas déjà
 if (-not (Test-Kernel)) {
     $env:HELYOS_LLM_BACKEND = "ollama"          # hérité par le processus enfant (PS 5.1 compatible)
+    # Cerveau : le plus intelligent que la carte peut tenir (RTX 5070 Ti 16 Go -> 14b),
+    # sinon repli sur le 8b. On ne force pas un modèle absent.
+    $models = (ollama list 2>$null | Out-String)
+    if ($models -match "qwen3:14b") { $env:HELYOS_LLM_MODEL = "qwen3:14b" }
+    elseif ($models -match "qwen3:8b") { $env:HELYOS_LLM_MODEL = "qwen3:8b" }
     # PERSISTANCE : sans ça, tout s'efface au redémarrage (business, caisse, prospects).
     $env:HELYOS_MEMORY_BACKEND = "sqlite"
     $env:HELYOS_MEMORY_PATH = Join-Path $repo "helyos_data.sqlite"

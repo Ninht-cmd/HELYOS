@@ -32,6 +32,9 @@ Write-Host "  ⚠  Aucune authentification : n'utilise ceci que sur un wifi de c
 Write-Host ""
 
 $env:HELYOS_LLM_BACKEND = "ollama"
+$models = (ollama list 2>$null | Out-String)   # cerveau le plus intelligent disponible
+if ($models -match "qwen3:14b") { $env:HELYOS_LLM_MODEL = "qwen3:14b" }
+elseif ($models -match "qwen3:8b") { $env:HELYOS_LLM_MODEL = "qwen3:8b" }
 $env:HELYOS_MEMORY_BACKEND = "sqlite"          # persistance : les données survivent au redémarrage
 $env:HELYOS_MEMORY_PATH = Join-Path (Split-Path $PSScriptRoot -Parent) "helyos_data.sqlite"
 python -m uvicorn jarvis_kernel.main:app --app-dir apps/jarvis-kernel/src --host 0.0.0.0 --port 8080
