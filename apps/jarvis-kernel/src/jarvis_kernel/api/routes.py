@@ -219,6 +219,29 @@ def portfolio_detail(request: Request) -> list[BusinessDetail]:
     ]
 
 
+@router.get("/advisory/roles", tags=["advisory"])
+def advisory_roles(request: Request) -> list[dict]:
+    """Les 12 conseillers du Comité (C-suite) — advisory A1, n'exécutent jamais."""
+    from ..agents.advisory import ROLES
+
+    return [{"key": r.key, "title": r.title, "lens": r.lens} for r in ROLES.values()]
+
+
+@router.post("/advisory", tags=["advisory"])
+def advisory_ask(request: Request, body: dict) -> dict:
+    """Pose une question au Comité (ou à un C-level nommé). Conseil gouverné A1."""
+    from ..agents.advisory import AdvisoryBoard
+
+    ctx = _ctx(request)
+    q = str(body.get("message", "")).strip()
+    if not q:
+        raise HTTPException(status_code=422, detail="message requis")
+    v, out = AdvisoryBoard(llm=ctx.llm).advise(ctx, ctx.governance, q)
+    if out is None:
+        raise HTTPException(status_code=403, detail="Niveau A1 requis.")
+    return {"decision": v.decision.value, **out}
+
+
 @router.get("/pulse/briefing", response_model=BriefingResponse, tags=["pulse"])
 def pulse_briefing(request: Request) -> BriefingResponse:
     """Le briefing proactif : validations en attente, tâches humaines, marché, connecteurs.

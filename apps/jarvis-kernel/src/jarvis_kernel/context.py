@@ -81,6 +81,9 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
     from .agents.market_analyst import MarketAnalystAgent
     registry.register(MarketAnalystAgent())  # analyse marché (A1) ; ordre = GR-7, jamais autonome
 
+    from .agents.advisory import AdvisoryBoard
+    registry.register(AdvisoryBoard(llm=llm))  # comité C-suite (A1) : conseille, n'exécute jamais
+
     from .agents.paper_trader import PaperTrader
     registry.register(PaperTrader())  # trading en SIMULATION (A1) — argent fictif, jamais réel
 

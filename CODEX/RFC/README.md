@@ -36,5 +36,6 @@ Draft  →  In Review  →  Accepted  →  (donne lieu à ADR / implémentation)
 | [0014](RFC-0014-dossier-business.md) | Dossier Business — livre de caisse + échéances (gérer de A à Z) | Accepted |
 | [0015](RFC-0015-produits-plutot-que-prospection.md) | Devenir pros par ce qu'on crée — produits plutôt que prospection | Accepted |
 | [0016](RFC-0016-jarvis-local-rtx.md) | Le Jarvis local : RTX 5070 Ti — cerveau 14b (fait), voix Parakeet/Kokoro (chantier) | Accepted |
+| [0017](RFC-0017-mapping-ai-business-os.md) | PROMPT MASTER « AI Business OS » : mapping honnête + Comité C-suite (conseillers A1) | Accepted |
 
 Gabarit : [`_template.md`](_template.md).

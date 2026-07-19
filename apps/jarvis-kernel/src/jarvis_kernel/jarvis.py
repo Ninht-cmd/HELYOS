@@ -26,8 +26,8 @@ from .observability.tracing import span
 
 # Intentions reconnues. La classification renvoie l'une de ces étiquettes.
 INTENTS = ("portefeuille", "tresorerie", "prospection", "relance_factures", "creer_business",
-           "recherche", "marche_financier", "simulation_trading", "action_dangereuse",
-           "conversation")
+           "conseil", "recherche", "marche_financier", "simulation_trading",
+           "action_dangereuse", "conversation")
 
 # Filet déterministe (marche sans LLM). Motifs verbe/sujet, pas simples mots-clés.
 # ORDRE VOLONTAIRE : les actions dangereuses sont testées EN PREMIER — « supprime mes
@@ -35,7 +35,9 @@ INTENTS = ("portefeuille", "tresorerie", "prospection", "relance_factures", "cre
 _RULES: list[tuple[str, str]] = [
     # « paie(?!ment) » : « paie la facture » = financier, mais « paiement en retard »
     # appartient au flux factures — sinon la relance serait détournée vers la gouvernance.
-    ("action_dangereuse", r"supprim|efface|d[ée]truis|vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te|vends|investis|donne.{0,10}droit|permission|privil[eè]g"),
+    # « ach[eè]te\b » (verbe, pas « acheteurs ») ; vends/investis bornés pour ne pas
+    # attraper « acheteurs », « vendredi », « investissement » (noms) — vécu en test réel.
+    ("action_dangereuse", r"supprim|efface|d[ée]truis|vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te\b|\bvends\b|\binvestis\b|donne.{0,10}droit|permission|privil[eè]g"),
     # la caisse : noter une recette/dépense DÉJÀ réalisée, ou demander le bilan.
     # (« fais un virement » reste action_dangereuse : la règle du dessus passe d'abord.)
     ("tresorerie", r"encaiss|d[ée]pens|tr[ée]sorerie|\bbilan\b|\bsolde\b|combien.{0,20}(gagn|rapport)"),
@@ -44,6 +46,8 @@ _RULES: list[tuple[str, str]] = [
     ("prospection", r"prospect|pipeline|d[ée]marchage|qui dois-je relancer"),
     ("relance_factures", r"factur|relance|impay|client.{0,10}doit|paiement.{0,15}retard|retard.{0,15}paiement"),
     ("creer_business", r"cr[ée]e.{0,15}business|nouvelle boutique|lance.{0,15}(business|boutique)|scaffold"),
+    # le Comité C-suite : « demande au CFO », « que conseille le CMO », « avis du comité »
+    ("conseil", r"conseil|comit[ée]|\bceo\b|\bcfo\b|\bcto\b|\bcoo\b|\bcmo\b|\bciso\b|\bpdg\b|que (dit|conseille|pense)|ton avis|que ferais-tu"),
     # la simulation (argent fictif) se distingue du marché réel et des ordres réels
     ("simulation_trading", r"simul|fictif|virtuel|paper.?trad"),
     # « marché » seul reste une étude de marché (recherche) ; la finance exige son lexique.
@@ -137,6 +141,8 @@ class Jarvis:
                 reply = self._invoices(granted)
             elif intent == "creer_business":
                 reply = self._business(message, granted)
+            elif intent == "conseil":
+                reply = self._advisory(message, granted)
             elif intent == "recherche":
                 reply = self._research(message, granted)
             elif intent == "marche_financier":
@@ -240,6 +246,15 @@ class Jarvis:
                  "validation (GR-7) — et aucun courtier n'est branché, donc je prépare, "
                  "tu exécutes.")
         return JarvisReply("marche_financier", txt, True, v.decision.value)
+
+    def _advisory(self, message: str, granted: AutonomyLevel) -> JarvisReply:
+        from .agents.advisory import AdvisoryBoard
+
+        v, out = AdvisoryBoard(llm=self.llm).advise(self.ctx, self.ctx.governance, message, granted)
+        if out is None:
+            return JarvisReply("conseil", "Il me faut le niveau A1 pour convoquer le comité.",
+                               True, v.decision.value, v.rule)
+        return JarvisReply("conseil", f"[{out['title']}] {out['text']}", True, v.decision.value)
 
     def _treasury(self, message: str) -> JarvisReply:
         """La caisse : « encaisse 350 € de Dupont pour les services » / « bilan »."""
@@ -351,7 +366,7 @@ class Jarvis:
     def _dangerous(self, message: str, granted: AutonomyLevel) -> JarvisReply:
         """Une demande d'action risquée : on la SOUMET à la gouvernance et on répond avec le verdict."""
         m = message.lower()
-        if re.search(r"vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te|vends|investis", m):
+        if re.search(r"vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te\b|\bvends\b|\binvestis\b", m):
             atype = ActionType.FINANCIAL
         elif re.search(r"droit|permission|privil[eè]g", m):
             atype = ActionType.SELF_PERMISSION
