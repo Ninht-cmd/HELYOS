@@ -262,6 +262,46 @@ def jarvis_history(request: Request) -> list[HistoryEntry]:
     return [HistoryEntry(**e) for e in jarvis.history()]
 
 
+@router.get("/orders", tags=["orders"])
+def orders_list(request: Request) -> dict:
+    """Carnet de commandes : ventes (à livrer/encaisser) + achats (fournisseurs)."""
+    from ..business.orders import OrderBook
+
+    book = OrderBook(_ctx(request).memory)
+    return {"summary": book.summary(),
+            "orders": [o.to_dict() for o in book.list()]}
+
+
+@router.post("/orders", tags=["orders"])
+def orders_add(request: Request, body: dict) -> dict:
+    """Ajoute une commande (sens=vente|achat, partie, objet, montant_eur)."""
+    from ..business.orders import OrderBook
+
+    try:
+        o = OrderBook(_ctx(request).memory).add(
+            str(body.get("sens", "vente")), str(body.get("partie", "")),
+            str(body.get("objet", "")), float(body.get("montant_eur", 0)),
+            str(body.get("business", "")))
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return o.to_dict()
+
+
+@router.post("/orders/status", tags=["orders"])
+def orders_status(request: Request, body: dict) -> dict:
+    """Change le statut d'une commande (livree, encaissee, payee, annulee…)."""
+    from ..business.orders import OrderBook
+
+    try:
+        o = OrderBook(_ctx(request).memory).set_statut(
+            str(body.get("id", "")), str(body.get("statut", "")))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return o.to_dict()
+
+
 @router.get("/ledger", tags=["ledger"])
 def ledger_summary(request: Request, business: str | None = None) -> dict:
     """Bilan de caisse réel : global, ou d'un business (`?business=Nom exact`)."""

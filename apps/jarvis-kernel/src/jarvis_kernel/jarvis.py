@@ -25,8 +25,8 @@ from .governance.policy import Action, ActionType, Decision
 from .observability.tracing import span
 
 # Intentions reconnues. La classification renvoie l'une de ces étiquettes.
-INTENTS = ("portefeuille", "tresorerie", "prospection", "relance_factures", "creer_business",
-           "conseil", "recherche", "marche_financier", "simulation_trading",
+INTENTS = ("portefeuille", "commandes", "tresorerie", "prospection", "relance_factures",
+           "creer_business", "conseil", "recherche", "marche_financier", "simulation_trading",
            "action_dangereuse", "conversation")
 
 # Filet déterministe (marche sans LLM). Motifs verbe/sujet, pas simples mots-clés.
@@ -38,6 +38,8 @@ _RULES: list[tuple[str, str]] = [
     # « ach[eè]te\b » (verbe, pas « acheteurs ») ; vends/investis bornés pour ne pas
     # attraper « acheteurs », « vendredi », « investissement » (noms) — vécu en test réel.
     ("action_dangereuse", r"supprim|efface|d[ée]truis|vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te\b|\bvends\b|\binvestis\b|donne.{0,10}droit|permission|privil[eè]g"),
+    # commandes (les deux sens) et fournisseurs — AVANT tresorerie (« commande » ≠ « encaisse »)
+    ("commandes", r"commande|fournisseur|\bachats?\b|\bventes?\b|\blivrer\b|\blivr[ée]e|carnet"),
     # la caisse : noter une recette/dépense DÉJÀ réalisée, ou demander le bilan.
     # (« fais un virement » reste action_dangereuse : la règle du dessus passe d'abord.)
     ("tresorerie", r"encaiss|d[ée]pens|tr[ée]sorerie|\bbilan\b|\bsolde\b|combien.{0,20}(gagn|rapport)"),
@@ -133,6 +135,8 @@ class Jarvis:
             intent = self.classify(message)
             if intent == "portefeuille":
                 reply = self._portfolio()
+            elif intent == "commandes":
+                reply = self._orders(message)
             elif intent == "tresorerie":
                 reply = self._treasury(message)
             elif intent == "prospection":
@@ -255,6 +259,48 @@ class Jarvis:
             return JarvisReply("conseil", "Il me faut le niveau A1 pour convoquer le comité.",
                                True, v.decision.value, v.rule)
         return JarvisReply("conseil", f"[{out['title']}] {out['text']}", True, v.decision.value)
+
+    def _orders(self, message: str) -> JarvisReply:
+        from .business.orders import OrderBook
+
+        book = OrderBook(self.ctx.memory)
+        m = message.lower()
+        # parse sur l'ORIGINAL (garde la casse des noms) ; détecte le sens sur la version bas-de-casse
+        add = re.search(r"(?:nouvelle commande|commande|vente|achat)\s*[:\-]\s*(.+)",
+                        message, re.IGNORECASE)
+        if add and ("," in add.group(1)):
+            sens = "achat" if re.search(r"\bachat\b|fournisseur", m) else "vente"
+            parts = [x.strip() for x in add.group(1).split(",")]
+            montant = 0.0
+            mo = re.search(r"(\d+(?:[.,]\d+)?)", parts[-1])
+            if mo:
+                montant = float(mo.group(1).replace(",", "."))
+            o = book.add(sens, partie=parts[0], objet=parts[1] if len(parts) > 1 else "",
+                         montant_eur=montant)
+            self.ctx.bus.emit("order.added", sens=sens, montant_eur=o.montant_eur)
+            qui = "client" if sens == "vente" else "fournisseur"
+            suite = ("marque-la « livrée » quand c'est fait, je te rappellerai de l'encaisser"
+                     if sens == "vente" else
+                     "un paiement fournisseur reste ta décision (GR-7)")
+            return JarvisReply("commandes",
+                f"Commande {sens} enregistrée : {o.objet or '—'} pour {qui} {o.partie}, "
+                f"{o.montant_eur:.2f} € (réf {o.id}). {suite}.")
+
+        s = book.summary()
+        if s["ventes"] == 0 and s["achats"] == 0:
+            return JarvisReply("commandes",
+                "Carnet de commandes vide. Dis « commande : client Dupont, pack pilote, 350 » "
+                "pour une vente, ou « achat : Printful, mugs, 40 » pour un fournisseur.")
+        lines = [f"Carnet : {s['ventes']} vente(s), {s['achats']} achat(s)."]
+        if s["a_livrer"]:
+            lines.append(f"  • À LIVRER : {s['a_livrer']} commande(s) client.")
+        if s["a_encaisser"]:
+            lines.append(f"  • À ENCAISSER : {s['a_encaisser']} livrée(s) = {s['a_encaisser_eur']:.2f} € qui dorment.")
+        if s["a_payer"]:
+            lines.append(f"  • À PAYER (ta décision, GR-7) : {s['a_payer']} achat(s) reçus.")
+        if s["fournisseurs"]:
+            lines.append(f"  • Fournisseurs : {', '.join(s['fournisseurs'])}.")
+        return JarvisReply("commandes", "\n".join(lines))
 
     def _treasury(self, message: str) -> JarvisReply:
         """La caisse : « encaisse 350 € de Dupont pour les services » / « bilan »."""

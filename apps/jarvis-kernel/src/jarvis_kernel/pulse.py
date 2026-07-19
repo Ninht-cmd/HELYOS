@@ -129,6 +129,22 @@ class Pulse:
         return [PulseItem("deadline", f"{len(due)} échéance(s) datée(s) sous 7 jours : {first}",
                           urgent=True)]
 
+    def _watch_orders(self) -> list[PulseItem]:
+        """Commandes clients à livrer, et argent livré mais pas encore encaissé."""
+        from .business.orders import OrderBook
+
+        book = OrderBook(self.ctx.memory)
+        s = book.summary()
+        items: list[PulseItem] = []
+        if s["a_livrer"]:
+            items.append(PulseItem("order",
+                f"{s['a_livrer']} commande(s) client à livrer.", urgent=True))
+        if s["a_encaisser"]:
+            items.append(PulseItem("order",
+                f"{s['a_encaisser_eur']:.2f} € livrés mais pas encore encaissés — "
+                "dis « encaisse … ».", urgent=True))
+        return items
+
     def _watch_treasury(self) -> list[PulseItem]:
         """Une caisse négative n'attend pas le vendredi pour être annoncée."""
         if self.ctx.ledger is None:
@@ -181,7 +197,7 @@ class Pulse:
             items: list[PulseItem] = []
             failures: list[str] = []
             for watcher in (self._watch_validations, self._watch_deadlines,
-                            self._watch_treasury, self._watch_tasks,
+                            self._watch_orders, self._watch_treasury, self._watch_tasks,
                             self._watch_prospection, self._watch_market,
                             self._watch_paper, self._watch_connectors):
                 try:
