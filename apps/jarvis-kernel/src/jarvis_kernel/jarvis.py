@@ -27,7 +27,7 @@ from .observability.tracing import span
 # Intentions reconnues. La classification renvoie l'une de ces étiquettes.
 INTENTS = ("portefeuille", "commandes", "tresorerie", "prospection", "relance_factures",
            "creer_business", "conseil", "recherche", "marche_financier", "simulation_trading",
-           "action_dangereuse", "conversation")
+           "nvidia_lab", "open_source_lab", "action_dangereuse", "conversation")
 
 # Filet déterministe (marche sans LLM). Motifs verbe/sujet, pas simples mots-clés.
 # ORDRE VOLONTAIRE : les actions dangereuses sont testées EN PREMIER — « supprime mes
@@ -50,6 +50,8 @@ _RULES: list[tuple[str, str]] = [
     ("creer_business", r"cr[ée]e.{0,15}business|nouvelle boutique|lance.{0,15}(business|boutique)|scaffold"),
     # le Comité C-suite : « demande au CFO », « que conseille le CMO », « avis du comité »
     ("conseil", r"conseil|comit[ée]|\bceo\b|\bcfo\b|\bcto\b|\bcoo\b|\bcmo\b|\bciso\b|\bpdg\b|que (dit|conseille|pense)|ton avis|que ferais-tu"),
+    ("nvidia_lab", r"\bnvidia\b|\bcuda\b|\bgpu\b|\bnemotron\b|\bollama\b|\bhugging\s*face\b|\brapids\b|\bholoscan\b|\btriton\b"),
+    ("open_source_lab", r"open.?source|github.{0,20}(catalog|depot|repos?|clone)|depot[s]?.{0,20}github|repos?.{0,20}open"),
     # la simulation (argent fictif) se distingue du marché réel et des ordres réels
     ("simulation_trading", r"simul|fictif|virtuel|paper.?trad"),
     # « marché » seul reste une étude de marché (recherche) ; la finance exige son lexique.
@@ -147,6 +149,10 @@ class Jarvis:
                 reply = self._business(message, granted)
             elif intent == "conseil":
                 reply = self._advisory(message, granted)
+            elif intent == "nvidia_lab":
+                reply = self._nvidia_lab(granted)
+            elif intent == "open_source_lab":
+                reply = self._open_source_lab(granted)
             elif intent == "recherche":
                 reply = self._research(message, granted)
             elif intent == "marche_financier":
@@ -259,6 +265,54 @@ class Jarvis:
             return JarvisReply("conseil", "Il me faut le niveau A1 pour convoquer le comité.",
                                True, v.decision.value, v.rule)
         return JarvisReply("conseil", f"[{out['title']}] {out['text']}", True, v.decision.value)
+
+    def _nvidia_lab(self, granted: AutonomyLevel) -> JarvisReply:
+        from .agents.nvidia_lab import NvidiaLabAgent
+
+        v, status = NvidiaLabAgent().snapshot(self.ctx.governance, granted)
+        if status is None:
+            return JarvisReply("nvidia_lab", "Il me faut le niveau A0 pour lire le lab NVIDIA.",
+                               True, v.decision.value, v.rule)
+        gh = status["github"]
+        hf = status["huggingface"]
+        rt = status["runtime"]
+        gpu = rt["gpu"].get("name", "GPU non detectee")
+        model = "actif" if rt["ollama"].get("model_running") else (
+            "installe" if rt["ollama"].get("model_installed") else "absent"
+        )
+        text = (
+            f"NVIDIA Lab: score {status['readiness']['score']}/100.\n"
+            f"  - GitHub NVIDIA local: {gh['local_available']}/{gh['attempted']} depots traites.\n"
+            f"  - Hugging Face NVIDIA local: {hf['local_available']}/{hf['entries']} entrees; "
+            f"{hf['gated_auth_required']} gated/licence.\n"
+            f"  - Runtime: {gpu}; Docker CUDA "
+            f"{'pret' if rt['docker'].get('cuda_13_3_ready') else 'a verifier'}; "
+            f"Nemotron Ollama {model}.\n"
+            f"  - Racine: {status['root']}"
+        )
+        return JarvisReply("nvidia_lab", text, True, v.decision.value)
+
+    def _open_source_lab(self, granted: AutonomyLevel) -> JarvisReply:
+        from .agents.open_source_lab import OpenSourceLabAgent
+
+        v, status = OpenSourceLabAgent().snapshot(self.ctx.governance, granted)
+        if status is None:
+            return JarvisReply("open_source_lab", "Il me faut le niveau A0 pour lire OPEN-SOURCE-LAB.",
+                               True, v.decision.value, v.rule)
+        inventory = status.get("local_inventory", {})
+        local_total = status.get("local_total", status["local_available"])
+        bare_fallback = inventory.get("bare_fallback", status.get("by_status", {}).get("fallback_bare", 0))
+        text = (
+            f"OPEN-SOURCE-LAB: score {status['readiness']['score']}/100.\n"
+            f"  - Catalogue GitHub: {status['catalogued']} depots publics sur les topics "
+            f"{', '.join(status['topics'])}.\n"
+            f"  - Local total: {local_total} depots "
+            f"({inventory.get('working_tree', local_total - bare_fallback)} worktrees, {bare_fallback} bare fallback).\n"
+            f"  - Derniere passe clone: {status['local_available']}/{status['attempted']} depots.\n"
+            f"  - Libre disque: {status['disk']['free_gb']} GB.\n"
+            f"  - Racine: {status['root']}"
+        )
+        return JarvisReply("open_source_lab", text, True, v.decision.value)
 
     def _orders(self, message: str) -> JarvisReply:
         from .business.orders import OrderBook

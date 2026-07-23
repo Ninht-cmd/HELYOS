@@ -144,6 +144,34 @@ class TestApi(unittest.TestCase):
         # readiness est un mélange pondéré : HELYOS (35%) présent -> jamais 0
         self.assertGreaterEqual(t["readiness"]["score"], 35)
         self.assertEqual(set(t["autopilot"]), {"ready", "blocked", "pct"})
+        self.assertIn("nvidia", t)
+        self.assertIn("score", t["nvidia"])
+        self.assertIn("opensource", t)
+        self.assertIn("score", t["opensource"])
+
+    def test_nvidia_status_endpoint(self):
+        r = self.client.get("/nvidia/status")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertEqual(body["decision"], "allow")
+        self.assertIn("github", body)
+        self.assertIn("huggingface", body)
+        self.assertIn("runtime", body)
+
+    def test_nvidia_sync_updates_portfolio(self):
+        r = self.client.post("/nvidia/sync")
+        self.assertEqual(r.status_code, 200)
+        folio = {b["name"]: b for b in self.client.get("/portfolio").json()}
+        self.assertIn("NVIDIA Lab", folio)
+        self.assertIn("nvidia_readiness", folio["NVIDIA Lab"]["metrics"])
+
+    def test_open_source_status_endpoint(self):
+        r = self.client.get("/opensource/status")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertEqual(body["decision"], "allow")
+        self.assertIn("catalogued", body)
+        self.assertIn("local_available", body)
 
     def test_connectors_map_is_honest(self):
         r = self.client.get("/connectors")

@@ -105,11 +105,32 @@ def cockpit_topology(request: Request) -> dict:
     engines = {"status": "online" if oll_ok else "offline", "models": models,
                "backend": ctx.settings.llm_backend}
 
+    from ..integrations.nvidia_lab import NvidiaLab
+    nvidia_state = NvidiaLab().status()
+    nvidia = {"status": "online" if nvidia_state["exists"] else "offline",
+              "score": nvidia_state["readiness"]["score"],
+              "github_local": nvidia_state["github"]["local_available"],
+              "huggingface_local": nvidia_state["huggingface"]["local_available"],
+              "gated": nvidia_state["huggingface"]["gated_auth_required"],
+              "root": nvidia_state["root"]}
+
+    from ..integrations.open_source_lab import OpenSourceLab
+    oss_state = OpenSourceLab().status()
+    opensource = {"status": "online" if oss_state["exists"] else "offline",
+                  "score": oss_state["readiness"]["score"],
+                  "catalogued": oss_state["catalogued"],
+                  "local": oss_state.get("local_total", oss_state["local_available"]),
+                  "latest_batch_local": oss_state["local_available"],
+                  "root": oss_state["root"]}
+
     # Readiness = mélange PONDÉRÉ et transparent de ce qui est réellement joignable.
     parts = {"helyos": 100, "stark": 100 if stark_ok else 0,
              "engines": 100 if oll_ok else 0,
-             "modules": min(100, round(len(ctx.registry) / 7 * 100))}
-    weights = {"helyos": 0.35, "stark": 0.25, "engines": 0.25, "modules": 0.15}
+             "modules": min(100, round(len(ctx.registry) / 9 * 100)),
+             "nvidia": nvidia_state["readiness"]["score"],
+             "opensource": oss_state["readiness"]["score"]}
+    weights = {"helyos": 0.28, "stark": 0.18, "engines": 0.18,
+               "modules": 0.14, "nvidia": 0.12, "opensource": 0.10}
     score = round(sum(parts[k] * weights[k] for k in parts))
 
     # Autopilot = part des actions passées SANS validation humaine (allow) vs bloquées.
@@ -121,6 +142,8 @@ def cockpit_topology(request: Request) -> dict:
                  "pct": round(allowed / total * 100) if total else 0}
 
     return {"helyos": helyos, "stark": stark, "jarvis": stark,  # JARVIS = le pont STARK
+            "nvidia": nvidia,
+            "opensource": opensource,
             "engines": engines, "readiness": {"score": score, "parts": parts},
             "autopilot": autopilot}
 
@@ -240,6 +263,130 @@ def advisory_ask(request: Request, body: dict) -> dict:
     if out is None:
         raise HTTPException(status_code=403, detail="Niveau A1 requis.")
     return {"decision": v.decision.value, **out}
+
+
+@router.get("/nvidia/status", tags=["nvidia"])
+def nvidia_status(request: Request) -> dict:
+    """Etat reel du lab NVIDIA local: rapports telecharges + runtime GPU/Docker/Ollama."""
+    from ..agents.nvidia_lab import NvidiaLabAgent
+
+    ctx = _ctx(request)
+    v, status = NvidiaLabAgent().snapshot(ctx.governance, AutonomyLevel.A0)
+    if status is None:
+        raise HTTPException(status_code=403, detail="Lecture NVIDIA refusee.")
+    return {"decision": v.decision.value, **status}
+
+
+@router.get("/nvidia/assets", tags=["nvidia"])
+def nvidia_assets(request: Request) -> dict:
+    """Inventaire compact des actifs NVIDIA locaux et des chemins de reference."""
+    from ..integrations.nvidia_lab import NvidiaLab
+
+    status = NvidiaLab().status()
+    return {
+        "root": status["root"],
+        "github": status["github"],
+        "huggingface": status["huggingface"],
+        "lfs_artifacts": status["lfs_artifacts"],
+    }
+
+
+@router.post("/nvidia/sync", tags=["nvidia"])
+def nvidia_sync(request: Request) -> dict:
+    """Synchronise l'etat NVIDIA dans la memoire/portefeuille HELYOS.
+
+    C'est du bookkeeping local: aucune licence n'est acceptee, aucun telechargement
+    n'est lance, aucun service externe n'est appele.
+    """
+    from ..business.portfolio import Business
+    from ..integrations.nvidia_lab import NvidiaLab
+
+    ctx = _ctx(request)
+    verdict = ctx.governance.submit(
+        Action(type=ActionType.ANALYZE, actor="nvidia_lab",
+               description="Synchroniser l'etat local NVIDIA-LAB vers HELYOS"),
+        AutonomyLevel.A1,
+    )
+    if not verdict.allowed:
+        raise HTTPException(status_code=403, detail="Niveau A1 requis.")
+
+    status = NvidiaLab().status()
+    ctx.memory.remember("status", status, namespace="nvidia_lab")
+    name = "NVIDIA Lab"
+    if ctx.portfolio.get(name) is None:
+        ctx.portfolio.register(Business(
+            name=name,
+            kind="infrastructure",
+            status="miroir local NVIDIA/CUDA/Hugging Face relie a HELYOS",
+            metrics={},
+            tasks=[
+                {"task": "[HUMAIN] Accepter manuellement les licences gated si besoin",
+                 "done": False, "owner": "humain"},
+                {"task": "[HELYOS] Rafraichir le classeur d'etat business",
+                 "done": False, "owner": "helyos"},
+            ],
+        ))
+    ctx.portfolio.set_status(name, f"connecte - score {status['readiness']['score']}/100")
+    ctx.portfolio.set_metric(name, "nvidia_readiness", status["readiness"]["score"])
+    ctx.portfolio.set_metric(name, "github_repos_local", status["github"]["local_available"])
+    ctx.portfolio.set_metric(name, "huggingface_local", status["huggingface"]["local_available"])
+    ctx.portfolio.set_metric(name, "huggingface_gated", status["huggingface"]["gated_auth_required"])
+    ctx.portfolio.set_metric(name, "disk_free_gb", status["disk"]["free_gb"])
+    ctx.bus.emit("nvidia_lab.synced", score=status["readiness"]["score"])
+    return {"decision": verdict.decision.value, "status": status}
+
+
+@router.get("/opensource/status", tags=["opensource"])
+def open_source_status(request: Request) -> dict:
+    """Etat reel du lab GitHub open source general."""
+    from ..agents.open_source_lab import OpenSourceLabAgent
+
+    ctx = _ctx(request)
+    v, status = OpenSourceLabAgent().snapshot(ctx.governance, AutonomyLevel.A0)
+    if status is None:
+        raise HTTPException(status_code=403, detail="Lecture OPEN-SOURCE-LAB refusee.")
+    return {"decision": v.decision.value, **status}
+
+
+@router.post("/opensource/sync", tags=["opensource"])
+def open_source_sync(request: Request) -> dict:
+    """Synchronise l'etat OPEN-SOURCE-LAB dans le portefeuille HELYOS."""
+    from ..business.portfolio import Business
+    from ..integrations.open_source_lab import OpenSourceLab
+
+    ctx = _ctx(request)
+    verdict = ctx.governance.submit(
+        Action(type=ActionType.ANALYZE, actor="open_source_lab",
+               description="Synchroniser l'etat local OPEN-SOURCE-LAB vers HELYOS"),
+        AutonomyLevel.A1,
+    )
+    if not verdict.allowed:
+        raise HTTPException(status_code=403, detail="Niveau A1 requis.")
+
+    status = OpenSourceLab().status()
+    ctx.memory.remember("status", status, namespace="open_source_lab")
+    name = "GitHub Open Source Lab"
+    if ctx.portfolio.get(name) is None:
+        ctx.portfolio.register(Business(
+            name=name,
+            kind="opensource",
+            status="catalogue local GitHub open source relie a HELYOS",
+            metrics={},
+            tasks=[
+                {"task": "[HELYOS] Elargir le catalogue par topics/orgs avec GITHUB_TOKEN",
+                 "done": False, "owner": "helyos"},
+                {"task": "[HUMAIN] Valider les briques a integrer produit par produit",
+                 "done": False, "owner": "humain"},
+            ],
+        ))
+    ctx.portfolio.set_status(name, f"connecte - score {status['readiness']['score']}/100")
+    ctx.portfolio.set_metric(name, "catalogued_repos", status["catalogued"])
+    ctx.portfolio.set_metric(name, "local_repos", status.get("local_total", status["local_available"]))
+    ctx.portfolio.set_metric(name, "latest_batch_local_repos", status["local_available"])
+    ctx.portfolio.set_metric(name, "bare_fallback_repos", status.get("local_inventory", {}).get("bare_fallback", 0))
+    ctx.portfolio.set_metric(name, "disk_free_gb", status["disk"]["free_gb"])
+    ctx.bus.emit("open_source_lab.synced", score=status["readiness"]["score"])
+    return {"decision": verdict.decision.value, "status": status}
 
 
 @router.get("/pulse/briefing", response_model=BriefingResponse, tags=["pulse"])

@@ -84,6 +84,12 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
     from .agents.advisory import AdvisoryBoard
     registry.register(AdvisoryBoard(llm=llm))  # comité C-suite (A1) : conseille, n'exécute jamais
 
+    from .agents.nvidia_lab import NvidiaLabAgent
+    registry.register(NvidiaLabAgent())  # NVIDIA/CUDA/HF/GitHub local : lecture seule (A0)
+
+    from .agents.open_source_lab import OpenSourceLabAgent
+    registry.register(OpenSourceLabAgent())  # GitHub open source general : lecture seule (A0)
+
     from .agents.paper_trader import PaperTrader
     registry.register(PaperTrader())  # trading en SIMULATION (A1) — argent fictif, jamais réel
 
