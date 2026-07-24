@@ -46,6 +46,10 @@ class ReasoningAgent(Agent):
             "commandes": self._t_orders,
             "marche": self._t_market,
             "bibliotheque": self._t_library,
+            # --- CONNECTEURS (lecture A1 : le cerveau voit et rafraîchit le monde branché) ---
+            "connecteurs": self._t_connecteurs,
+            "synchronise": self._t_synchronise,
+            "outils_mcp": self._t_mcp,
             # --- ACTION (interne, réversible ; exige A2) : agir ---
             "enregistre_recette": self._a_recette,
             "enregistre_depense": self._a_depense,
@@ -95,6 +99,35 @@ class ReasoningAgent(Agent):
         from ..integrations.library import OpenSourceLibrary
         hits = OpenSourceLibrary().search(arg or "", limit=3)
         return "; ".join(f"{h['full_name']} ({h['stars']}★)" for h in hits) or "aucun repo trouvé"
+
+    # ---- connecteurs : le cerveau voit et rafraîchit ce qui est branché au monde ----
+    def _t_connecteurs(self, _arg: str) -> str:
+        cx = self.ctx.connectors or []
+        return "; ".join(f"{c.name}={c.status().status}" for c in cx) or "aucun connecteur"
+
+    def _t_synchronise(self, _arg: str) -> str:
+        """Tire les données RÉELLES des connecteurs branchés (GitHub, marché) vers le
+        portefeuille. Lecture externe gouvernée (ANALYZE, A1)."""
+        v = self.ctx.governance.submit(
+            Action(type=ActionType.ANALYZE, actor=self.name,
+                   description="Synchroniser les connecteurs"), self._granted)
+        if v.decision is not Decision.ALLOW:
+            return "[refusé : niveau A1 requis]"
+        done = []
+        for c in (self.ctx.connectors or []):
+            if getattr(c, "sync", None) is None or c.status().status != "connected":
+                continue
+            try:
+                s = c.sync(self.ctx.portfolio)
+                if s:
+                    done.append(f"{c.name}: {s}")
+            except Exception:
+                pass
+        return " | ".join(done) or "rien à synchroniser (connecteurs money non configurés)"
+
+    def _t_mcp(self, _arg: str) -> str:
+        from ..integrations.mcp_client import load_specs
+        return ", ".join(s.name for s in load_specs()) or "aucun serveur MCP"
 
     # ---- outils d'ACTION (interne, réversible ; passent par la gouvernance : A2 requis) ----
     def _gate(self, atype: ActionType, desc: str) -> bool:
@@ -269,6 +302,9 @@ class ReasoningAgent(Agent):
         "portefeuille": "l'état des business", "tresorerie": "recettes/dépenses/solde",
         "prospection": "prospects et relances", "commandes": "ventes/achats à traiter",
         "marche": "prix crypto (arg=btc/eth)", "bibliotheque": "repos open-source locaux (arg=besoin)",
+        "connecteurs": "l'état des connecteurs (branché / à connecter)",
+        "synchronise": "tire les données réelles des connecteurs branchés (GitHub, marché)",
+        "outils_mcp": "les serveurs MCP branchés (se branche à tout)",
         "enregistre_recette": "note une recette réelle (arg='business montant')",
         "enregistre_depense": "note une dépense (arg='business montant')",
         "ajoute_prospect": "ajoute un prospect (arg='nom')",

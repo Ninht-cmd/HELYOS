@@ -131,6 +131,28 @@ class TestReasoning(unittest.TestCase):
         self.assertNotIn("avec succès", r.text)              # le mensonge est écarté
         self.assertIn("rien modifié", r.text.lower())
 
+    def test_brain_sees_connectors(self) -> None:
+        # le cerveau peut lire l'état des connecteurs (github, market, tradingview…)
+        llm = ScriptedLLM(['{"outil": "connecteurs", "args": ""}',
+                           '{"final": "vu les connecteurs."}'])
+        out = ReasoningAgent(self.ctx, llm=llm).run("montre mes connecteurs")
+        self.assertEqual(out["steps"][0]["tool"], "connecteurs")
+        self.assertIn("=", out["steps"][0]["result"])        # "github=connected; ..."
+        self.assertFalse(out["steps"][0]["is_action"])       # lecture, pas action (A1)
+
+    def test_brain_synchronise_is_governed_read(self) -> None:
+        # synchronise = lecture externe gouvernée (A1), pas une action A2
+        llm = ScriptedLLM(['{"outil": "synchronise", "args": ""}', '{"final": "sync."}'])
+        out = ReasoningAgent(self.ctx, llm=llm).run("synchronise mes connecteurs",
+                                                    granted=AutonomyLevel.A1)
+        self.assertEqual(out["steps"][0]["tool"], "synchronise")
+        self.assertFalse(out["steps"][0]["is_action"])       # A1 suffit (lecture)
+
+    def test_brain_sees_mcp_servers(self) -> None:
+        llm = ScriptedLLM(['{"outil": "outils_mcp", "args": ""}', '{"final": "ok."}'])
+        out = ReasoningAgent(self.ctx, llm=llm).run("quels serveurs MCP")
+        self.assertIn("helyos-self", out["steps"][0]["result"])   # loopback par défaut
+
     def test_jarvis_routes_reasoning(self) -> None:
         j = self.ctx.jarvis
         self.assertEqual(j.classify("que dois-je faire cette semaine ?"), "raisonnement")
