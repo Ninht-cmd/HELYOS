@@ -50,6 +50,9 @@ class ReasoningAgent(Agent):
             "connecteurs": self._t_connecteurs,
             "synchronise": self._t_synchronise,
             "outils_mcp": self._t_mcp,
+            # --- INTERNET (lecture A1 : parcourir et connaître le monde) ---
+            "cherche_web": self._t_web_search,
+            "lis_page": self._t_web_fetch,
             # --- ACTION (interne, réversible ; exige A2) : agir ---
             "enregistre_recette": self._a_recette,
             "enregistre_depense": self._a_depense,
@@ -128,6 +131,21 @@ class ReasoningAgent(Agent):
     def _t_mcp(self, _arg: str) -> str:
         from ..integrations.mcp_client import load_specs
         return ", ".join(s.name for s in load_specs()) or "aucun serveur MCP"
+
+    # ---- Internet : parcourir et connaître (marchés, e-commerce, ingénierie…) ----
+    def _t_web_search(self, arg: str) -> str:
+        from ..integrations.web import web_search
+        try:
+            return web_search(arg)[:900]
+        except Exception:
+            return "(recherche web indisponible — réseau)"
+
+    def _t_web_fetch(self, arg: str) -> str:
+        from ..integrations.web import web_fetch
+        try:
+            return web_fetch(arg)[:900]
+        except Exception:
+            return "(lecture de page indisponible — réseau)"
 
     # ---- outils d'ACTION (interne, réversible ; passent par la gouvernance : A2 requis) ----
     def _gate(self, atype: ActionType, desc: str) -> bool:
@@ -305,6 +323,8 @@ class ReasoningAgent(Agent):
         "connecteurs": "l'état des connecteurs (branché / à connecter)",
         "synchronise": "tire les données réelles des connecteurs branchés (GitHub, marché)",
         "outils_mcp": "les serveurs MCP branchés (se branche à tout)",
+        "cherche_web": "cherche sur Internet (marchés, e-commerce, ingénierie…) (arg=requête)",
+        "lis_page": "lit une page web publique (arg=URL http(s))",
         "enregistre_recette": "note une recette réelle (arg='business montant')",
         "enregistre_depense": "note une dépense (arg='business montant')",
         "ajoute_prospect": "ajoute un prospect (arg='nom')",
