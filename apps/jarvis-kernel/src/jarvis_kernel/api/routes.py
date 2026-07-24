@@ -449,6 +449,59 @@ def orders_status(request: Request, body: dict) -> dict:
     return o.to_dict()
 
 
+@router.get("/mcp/servers", tags=["mcp"])
+def mcp_servers(request: Request) -> dict:
+    """Serveurs MCP déclarés — HELYOS peut se brancher dessus (le « branche à tout »)."""
+    from ..integrations.mcp_client import load_specs
+
+    return {"servers": [{"name": s.name, "command": " ".join(s.command)} for s in load_specs()]}
+
+
+@router.post("/mcp/tools", tags=["mcp"])
+def mcp_tools(request: Request, body: dict) -> dict:
+    """Découvre les outils d'un serveur MCP (lecture = A1 gouverné)."""
+    from ..integrations.mcp_client import MCPClient, load_specs
+
+    ctx = _ctx(request)
+    v = ctx.governance.submit(
+        Action(type=ActionType.ANALYZE, actor="mcp_client",
+               description=f"Lister les outils MCP de {body.get('server', '?')}"),
+        AutonomyLevel.A1)
+    if not v.allowed:
+        raise HTTPException(status_code=403, detail="Niveau A1 requis.")
+    spec = next((s for s in load_specs() if s.name == body.get("server")), None)
+    if spec is None:
+        raise HTTPException(status_code=404, detail="serveur MCP inconnu")
+    try:
+        tools = MCPClient(spec).list_tools()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"MCP injoignable : {exc}") from exc
+    return {"server": spec.name, "tools": tools}
+
+
+@router.post("/mcp/call", tags=["mcp"])
+def mcp_call(request: Request, body: dict) -> dict:
+    """Appelle un outil MCP externe. Action sur le monde -> GR-2 : validation humaine.
+    Sans validated=true, HELYOS PRÉPARE mais n'exécute pas (c'est le contrat)."""
+    from ..integrations.mcp_client import MCPClient, load_specs
+
+    ctx = _ctx(request)
+    tool = str(body.get("tool", ""))
+    v = ctx.governance.submit(
+        Action(type=ActionType.EXTERNAL_SENSITIVE, actor="mcp_client",
+               description=f"Appeler l'outil MCP {tool} de {body.get('server', '?')}",
+               sensitive=True, validated=bool(body.get("validated", False))),
+        AutonomyLevel.A2)
+    if not v.allowed:
+        return {"decision": v.decision.value, "rule": v.rule, "executed": False,
+                "note": "Action externe : ta validation est requise (GR-2)."}
+    spec = next((s for s in load_specs() if s.name == body.get("server")), None)
+    if spec is None:
+        raise HTTPException(status_code=404, detail="serveur MCP inconnu")
+    result = MCPClient(spec).call_tool(tool, body.get("arguments") or {})
+    return {"decision": v.decision.value, "executed": True, "result": result}
+
+
 @router.get("/modules", tags=["modules"])
 def modules_list(request: Request) -> dict:
     """Registre des modules avec interrupteurs on/off (+ sonde des services locaux)."""
