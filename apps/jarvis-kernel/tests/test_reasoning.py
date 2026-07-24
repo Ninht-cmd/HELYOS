@@ -65,7 +65,7 @@ class TestReasoning(unittest.TestCase):
                            '{"final": "ok"}'])
         out = ReasoningAgent(self.ctx, llm=llm).run("x")
         self.assertEqual(len(out["steps"]), 1)               # une seule exécution réelle
-        self.assertIn("déjà obtenu", llm.prompts[2])         # le 3e prompt pousse à conclure
+        self.assertIn("déjà fait", llm.prompts[2])           # le 3e prompt montre le doublon évité
 
     def test_blocked_below_a1(self) -> None:
         out = ReasoningAgent(self.ctx, llm=ScriptedLLM([])).run("x", granted=AutonomyLevel.A0)
@@ -96,6 +96,23 @@ class TestReasoning(unittest.TestCase):
         agent = ReasoningAgent(self.ctx)
         for k in agent._tools:
             self.assertNotIn(k, ("payer", "virement", "envoyer", "supprimer", "publier"))
+
+    def test_more_actions_chain_at_a2(self) -> None:
+        # niveau Jarvis : le cerveau enchaîne PLUSIEURS actions réelles à A2
+        seed_known_businesses(self.ctx.portfolio)
+        llm = ScriptedLLM([
+            '{"outil": "ajoute_prospect", "args": "TestCorp"}',
+            '{"outil": "note_memoire", "args": "rappeler TestCorp vendredi"}',
+            '{"outil": "active_module", "args": "anythingllm"}',
+            '{"final": "3 actions faites."}'])
+        out = ReasoningAgent(self.ctx, llm=llm).run("objectif: prépare TestCorp",
+                                                    granted=AutonomyLevel.A2)
+        results = " ".join(s["result"] for s in out["steps"] if s["is_action"])
+        self.assertIn("TestCorp", results)          # prospect ajouté
+        self.assertIn("noté", results)              # note mémorisée
+        self.assertIn("activé", results)            # module allumé
+        from jarvis_kernel.integrations.modules import ModuleRegistry
+        self.assertTrue(ModuleRegistry(self.ctx.memory).is_on("anythingllm"))
 
     def test_refused_action_never_narrates_success(self) -> None:
         # honnêteté : à A1, même si le LLM prétend "enregistrée avec succès",

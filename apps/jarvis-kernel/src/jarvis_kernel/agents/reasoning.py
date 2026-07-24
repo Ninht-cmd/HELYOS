@@ -51,9 +51,14 @@ class ReasoningAgent(Agent):
             "enregistre_depense": self._a_depense,
             "ajoute_prospect": self._a_prospect,
             "coche_tache": self._a_tache,
+            "nouvelle_commande": self._a_commande,
+            "nouvelle_tache": self._a_nouvelle_tache,
+            "active_module": self._a_active_module,
+            "note_memoire": self._a_note,
         }
-        self._actions = {"enregistre_recette", "enregistre_depense",
-                         "ajoute_prospect", "coche_tache"}
+        self._actions = {"enregistre_recette", "enregistre_depense", "ajoute_prospect",
+                         "coche_tache", "nouvelle_commande", "nouvelle_tache",
+                         "active_module", "note_memoire"}
 
     # ---- outils (lecture seule ; chaque appel renvoie un texte compact pour le LLM) ----
     def _t_portfolio(self, _arg: str) -> str:
@@ -155,6 +160,53 @@ class ReasoningAgent(Agent):
         self.ctx.portfolio.complete_task(biz, opens[0]["task"][:30])
         return f"tâche cochée sur {biz} : {opens[0]['task'][:50]}"
 
+    def _a_commande(self, arg: str) -> str:
+        amt = self._amount(arg)
+        sens = "achat" if re.search(r"\bachat\b|fournisseur", (arg or "").lower()) else "vente"
+        partie = re.sub(r"\d+(?:[.,]\d+)?|\b(vente|achat|fournisseur|client|€|euros?)\b",
+                        "", arg or "", flags=re.IGNORECASE).strip(" ,-") or "?"
+        if amt <= 0:
+            return "[besoin d'un montant > 0]"
+        if not self._gate(ActionType.WRITE_LOCAL, f"nouvelle {sens} {amt}€ / {partie}"):
+            return "[refusé : lève l'autonomie à A2 pour que j'agisse]"
+        from ..business.orders import OrderBook
+        o = OrderBook(self.ctx.memory).add(sens, partie, "", amt)
+        return f"{sens} de {amt:.2f}€ enregistrée ({partie}, réf {o.id})"
+
+    def _a_nouvelle_tache(self, arg: str) -> str:
+        parts = re.split(r"[:|]", arg or "", maxsplit=1)
+        biz = self._match_business(parts[0]) or self._match_business(arg)
+        texte = (parts[1] if len(parts) > 1 else arg).strip()
+        if not biz or len(texte) < 3:
+            return "[besoin d'un business et d'un intitulé de tâche]"
+        if not self._gate(ActionType.WRITE_LOCAL, f"ajouter tâche / {biz}"):
+            return "[refusé : lève l'autonomie à A2 pour que j'agisse]"
+        self.ctx.portfolio.add_task(biz, f"[HELYOS] {texte[:80]}", owner="helyos")
+        return f"tâche ajoutée sur {biz} : {texte[:60]}"
+
+    def _a_active_module(self, arg: str) -> str:
+        from ..integrations.modules import DEFAULTS, ModuleRegistry
+        a = (arg or "").lower()
+        target = next((m for m in DEFAULTS if m.key in a or m.name.lower().split(" (")[0] in a), None)
+        if target is None:
+            return "[module non reconnu]"
+        if not self._gate(ActionType.WRITE_LOCAL, f"activer module {target.key}"):
+            return "[refusé : lève l'autonomie à A2 pour que j'agisse]"
+        ModuleRegistry(self.ctx.memory).toggle(target.key, True)
+        return f"module « {target.name} » activé"
+
+    def _a_note(self, arg: str) -> str:
+        note = (arg or "").strip()
+        if len(note) < 3:
+            return "[note vide]"
+        if not self._gate(ActionType.WRITE_LOCAL, "noter en mémoire"):
+            return "[refusé : lève l'autonomie à A2 pour que j'agisse]"
+        import time
+        notes = list(self.ctx.memory.recall("notes", namespace="brain") or [])
+        notes.append({"note": note[:200], "ts": time.time()})
+        self.ctx.memory.remember("notes", notes[-50:], namespace="brain")
+        return f"noté : {note[:60]}"
+
     # ---- la boucle ----
     def run(self, goal: str, granted: AutonomyLevel = AutonomyLevel.A1,
             max_steps: int = 6) -> dict[str, Any]:
@@ -176,29 +228,37 @@ class ReasoningAgent(Agent):
         for _ in range(max_steps):
             prompt = self._build_prompt(goal, tool_list, observations)
             try:
-                raw = self.llm.complete(prompt, num_predict=200).strip()
+                raw = self.llm.complete(prompt, num_predict=260).strip()
             except Exception:
                 break
-            action = self._parse(raw)
-            if action is None or "final" in action:
-                answer = (action or {}).get("final") or raw
-                return {"decision": "allow", "answer": answer, "steps": steps}
-            tool = action.get("outil") or action.get("tool")
-            arg = str(action.get("args") or action.get("arg") or "")
-            fn = self._tools.get(tool)
-            if fn is None:
-                observations.append(f"[outil inconnu: {tool} — utilise la liste fournie]")
-                continue
-            key = (tool, arg)
-            if key in cache:                      # déjà lu : ne pas re-solliciter, pousser à conclure
-                observations.append(f"[{tool}({arg}) déjà obtenu — tu as de quoi conclure]")
-                continue
-            result = fn(arg)                      # lecture (A1) ou action (gouvernée, A2)
-            cache[key] = result
-            self.ctx.governance.bus.emit("reasoning.tool", tool=tool)
-            observations.append(f"{tool}({arg}) = {result}")
-            steps.append({"tool": tool, "arg": arg, "result": result,
-                          "is_action": tool in self._actions})
+            objs = self._json_objects(raw)
+            if not objs:                          # rien de parsable : c'est la réponse finale
+                return {"decision": "allow", "answer": raw, "steps": steps}
+            # le modèle peut émettre PLUSIEURS actions d'un coup : on les exécute toutes,
+            # dans l'ordre, jusqu'à un {"final"} (vécu en lancement réel : qwen3 batch).
+            progressed = False
+            for action in objs:
+                if "final" in action:
+                    return {"decision": "allow", "answer": action["final"], "steps": steps}
+                tool = action.get("outil") or action.get("tool")
+                arg = str(action.get("args") or action.get("arg") or "")
+                fn = self._tools.get(tool)
+                if fn is None:
+                    observations.append(f"[outil inconnu: {tool}]")
+                    continue
+                key = (tool, arg)
+                if key in cache:
+                    observations.append(f"[{tool}({arg}) déjà fait]")
+                    continue
+                result = fn(arg)                  # lecture (A1) ou action (gouvernée, A2)
+                cache[key] = result
+                progressed = True
+                self.ctx.governance.bus.emit("reasoning.tool", tool=tool)
+                observations.append(f"{tool}({arg}) = {result}")
+                steps.append({"tool": tool, "arg": arg, "result": result,
+                              "is_action": tool in self._actions})
+            _ = progressed   # on re-sollicite le modèle (il voit les observations et conclut) ;
+            #                  la limite max_steps borne toute boucle, pas besoin de couper ici
 
         # limite atteinte : on demande une synthèse finale des observations
         final = self._final_synthesis(goal, observations)
@@ -213,6 +273,10 @@ class ReasoningAgent(Agent):
         "enregistre_depense": "note une dépense (arg='business montant')",
         "ajoute_prospect": "ajoute un prospect (arg='nom')",
         "coche_tache": "coche une tâche faite (arg='business')",
+        "nouvelle_commande": "enregistre une vente/achat (arg='client montant')",
+        "nouvelle_tache": "ajoute une tâche (arg='business : intitulé')",
+        "active_module": "allume un module/outil (arg='nom')",
+        "note_memoire": "mémorise une note (arg='texte')",
     }
 
     def _tool_hint(self, name: str) -> str:
@@ -235,14 +299,38 @@ class ReasoningAgent(Agent):
             f"{obs_txt}\n\nObjectif : {goal}\nJSON :"
         )
 
-    def _parse(self, raw: str) -> dict | None:
-        m = re.search(r"\{.*\}", raw, re.S)
-        if not m:
-            return None
-        try:
-            return json.loads(m.group(0))
-        except json.JSONDecodeError:
-            return None
+    def _json_objects(self, raw: str) -> list[dict]:
+        """Extrait TOUS les objets JSON de haut niveau (scanner d'accolades, tolère
+        plusieurs objets à la suite et le texte autour). Robuste au batch du modèle."""
+        objs: list[dict] = []
+        depth = 0
+        start: int | None = None
+        in_str = esc = False
+        for i, c in enumerate(raw):
+            if in_str:
+                if esc:
+                    esc = False
+                elif c == "\\":
+                    esc = True
+                elif c == '"':
+                    in_str = False
+                continue
+            if c == '"':
+                in_str = True
+            elif c == "{":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif c == "}":
+                if depth > 0:
+                    depth -= 1
+                    if depth == 0 and start is not None:
+                        try:
+                            objs.append(json.loads(raw[start:i + 1]))
+                        except json.JSONDecodeError:
+                            pass
+                        start = None
+        return objs
 
     def _final_synthesis(self, goal: str, obs: list[str]) -> str:
         from ..persona import FOUNDER_PROMPT
