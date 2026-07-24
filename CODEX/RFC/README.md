@@ -39,3 +39,4 @@ Draft  →  In Review  →  Accepted  →  (donne lieu à ADR / implémentation)
 | [0017](RFC-0017-mapping-ai-business-os.md) | PROMPT MASTER « AI Business OS » : mapping honnête + Comité C-suite (conseillers A1) | Accepted |
 
 Gabarit : [`_template.md`](_template.md).
+| [0018](RFC-0018-le-cerveau-boucle-de-raisonnement.md) | Le cerveau : boucle de raisonnement ReAct (l'IA, pas la coquille) | Accepted |

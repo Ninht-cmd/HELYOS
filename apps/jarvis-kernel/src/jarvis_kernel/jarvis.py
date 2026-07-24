@@ -27,7 +27,8 @@ from .observability.tracing import span
 # Intentions reconnues. La classification renvoie l'une de ces étiquettes.
 INTENTS = ("portefeuille", "commandes", "tresorerie", "prospection", "relance_factures",
            "creer_business", "conseil", "recherche", "marche_financier", "simulation_trading",
-           "nvidia_lab", "open_source_lab", "modules", "action_dangereuse", "conversation")
+           "nvidia_lab", "open_source_lab", "modules", "raisonnement", "action_dangereuse",
+           "conversation")
 
 # Filet déterministe (marche sans LLM). Motifs verbe/sujet, pas simples mots-clés.
 # ORDRE VOLONTAIRE : les actions dangereuses sont testées EN PREMIER — « supprime mes
@@ -40,6 +41,9 @@ _RULES: list[tuple[str, str]] = [
     ("action_dangereuse", r"supprim|efface|d[ée]truis|vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te\b|\bvends\b|\binvestis\b|donne.{0,10}droit|permission|privil[eè]g"),
     # commandes (les deux sens) et fournisseurs — AVANT tresorerie (« commande » ≠ « encaisse »)
     ("commandes", r"commande|fournisseur|\bachats?\b|\bventes?\b|\blivrer\b|\blivr[ée]e|carnet"),
+    # le cerveau : objectif multi-étapes qui demande de croiser plusieurs sources
+    ("raisonnement", r"que dois-je faire|analyse (ma|toute|la) situation|plan d'action|"
+                     r"\bma priorit[ée]|raisonne sur|objectif\s*[:\-]|croise (tout|les|mes)"),
     # la caisse : noter une recette/dépense DÉJÀ réalisée, ou demander le bilan.
     # (« fais un virement » reste action_dangereuse : la règle du dessus passe d'abord.)
     ("tresorerie", r"encaiss|d[ée]pens|tr[ée]sorerie|\bbilan\b|\bsolde\b|combien.{0,20}(gagn|rapport)"),
@@ -151,6 +155,8 @@ class Jarvis:
                 reply = self._business(message, granted)
             elif intent == "conseil":
                 reply = self._advisory(message, granted)
+            elif intent == "raisonnement":
+                reply = self._reasoning(message, granted)
             elif intent == "nvidia_lab":
                 reply = self._nvidia_lab(granted)
             elif intent == "open_source_lab":
@@ -260,6 +266,17 @@ class Jarvis:
                  "validation (GR-7) — et aucun courtier n'est branché, donc je prépare, "
                  "tu exécutes.")
         return JarvisReply("marche_financier", txt, True, v.decision.value)
+
+    def _reasoning(self, message: str, granted: AutonomyLevel) -> JarvisReply:
+        from .agents.reasoning import ReasoningAgent
+
+        out = ReasoningAgent(self.ctx, llm=self.llm).run(message, granted)
+        if out["answer"] is None:
+            return JarvisReply("raisonnement", "Il me faut le niveau A1 pour raisonner.",
+                               True, out["decision"])
+        used = ", ".join(dict.fromkeys(s["tool"] for s in out["steps"]))
+        suffix = f"\n\n(J'ai consulté : {used})" if used else ""
+        return JarvisReply("raisonnement", out["answer"] + suffix, True, "allow")
 
     def _advisory(self, message: str, granted: AutonomyLevel) -> JarvisReply:
         from .agents.advisory import AdvisoryBoard

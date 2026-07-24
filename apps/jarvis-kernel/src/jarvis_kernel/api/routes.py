@@ -449,6 +449,18 @@ def orders_status(request: Request, body: dict) -> dict:
     return o.to_dict()
 
 
+@router.post("/agent/run", tags=["agent"])
+def agent_run(request: Request, body: dict) -> dict:
+    """Le cerveau : donne un objectif, il choisit/enchaîne ses outils de lecture et raisonne."""
+    from ..agents.reasoning import ReasoningAgent
+
+    ctx = _ctx(request)
+    goal = str(body.get("goal", "")).strip()
+    if not goal:
+        raise HTTPException(status_code=422, detail="goal requis")
+    return ReasoningAgent(ctx, llm=ctx.llm).run(goal)
+
+
 @router.get("/mcp/servers", tags=["mcp"])
 def mcp_servers(request: Request) -> dict:
     """Serveurs MCP déclarés — HELYOS peut se brancher dessus (le « branche à tout »)."""
