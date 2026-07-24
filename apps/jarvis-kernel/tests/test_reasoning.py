@@ -71,6 +71,49 @@ class TestReasoning(unittest.TestCase):
         out = ReasoningAgent(self.ctx, llm=ScriptedLLM([])).run("x", granted=AutonomyLevel.A0)
         self.assertIsNone(out["answer"])
 
+    def test_action_executes_at_a2_and_changes_state(self) -> None:
+        # « vraie action » : à A2, le cerveau enregistre réellement une recette
+        svc = "HELYOS Services (automatisation admin)"
+        llm = ScriptedLLM([f'{{"outil": "enregistre_recette", "args": "services 90"}}',
+                           '{"final": "recette notée."}'])
+        out = ReasoningAgent(self.ctx, llm=llm).run("enregistre 90€ pour les services",
+                                                    granted=AutonomyLevel.A2)
+        self.assertTrue(out["steps"][0]["is_action"])
+        self.assertIn("90", out["steps"][0]["result"])
+        self.assertEqual(self.ctx.ledger.summary(svc)["recettes_eur"], 90.0)  # état RÉELLEMENT changé
+
+    def test_action_refused_at_a1(self) -> None:
+        # à A1, l'action est refusée : le cerveau observe mais n'agit pas
+        llm = ScriptedLLM(['{"outil": "enregistre_recette", "args": "services 90"}',
+                           '{"final": "je n\'ai pas pu agir."}'])
+        out = ReasoningAgent(self.ctx, llm=llm).run("enregistre 90€", granted=AutonomyLevel.A1)
+        self.assertIn("refusé", out["steps"][0]["result"])
+        g = self.ctx.ledger.global_summary()
+        self.assertEqual(g["recettes_eur"], 0.0)                # rien n'a bougé
+
+    def test_brain_has_no_money_out_or_send_tool(self) -> None:
+        # garde-fou : aucun outil du cerveau ne paie/envoie/supprime (GR-7/GR-2 hors du cerveau)
+        agent = ReasoningAgent(self.ctx)
+        for k in agent._tools:
+            self.assertNotIn(k, ("payer", "virement", "envoyer", "supprimer", "publier"))
+
+    def test_refused_action_never_narrates_success(self) -> None:
+        # honnêteté : à A1, même si le LLM prétend "enregistrée avec succès",
+        # la réponse dit clairement que rien n'a été modifié.
+        class LyingLLM(LLMPort):
+            def __init__(self): self.n = 0
+            def complete(self, prompt, **k):
+                self.n += 1
+                if self.n == 1:
+                    return '{"outil": "enregistre_recette", "args": "services 120"}'
+                return '{"final": "La recette a été enregistrée avec succès."}'
+        self.ctx.jarvis.llm = LyingLLM()
+        r = self.ctx.jarvis.handle("objectif: enregistre 120 pour services",
+                                   granted=AutonomyLevel.A1)
+        self.assertIn("NON fait", r.text)
+        self.assertNotIn("avec succès", r.text)              # le mensonge est écarté
+        self.assertIn("rien modifié", r.text.lower())
+
     def test_jarvis_routes_reasoning(self) -> None:
         j = self.ctx.jarvis
         self.assertEqual(j.classify("que dois-je faire cette semaine ?"), "raisonnement")

@@ -274,9 +274,25 @@ class Jarvis:
         if out["answer"] is None:
             return JarvisReply("raisonnement", "Il me faut le niveau A1 pour raisonner.",
                                True, out["decision"])
-        used = ", ".join(dict.fromkeys(s["tool"] for s in out["steps"]))
-        suffix = f"\n\n(J'ai consulté : {used})" if used else ""
-        return JarvisReply("raisonnement", out["answer"] + suffix, True, "allow")
+        actions = [s for s in out["steps"] if s.get("is_action")]
+        reads = [s for s in out["steps"] if not s.get("is_action")]
+        # HONNÊTETÉ D'ABORD : les FAITS des actions priment sur la prose du LLM
+        # (un modèle peut narrer un « succès » qui n'a pas eu lieu — on ne le laisse pas).
+        done = [s for s in actions if not s["result"].startswith("[")]
+        blocked = [s for s in actions if s["result"].startswith("[")]
+        head = ""
+        if done:
+            head += "✅ Fait : " + " ; ".join(s["result"] for s in done) + "\n"
+        if blocked:
+            head += ("⛔ NON fait : " + " ; ".join(s["result"].strip("[]") for s in blocked)
+                     + "\n")
+        body = out["answer"]
+        if blocked and not done:
+            # aucune action réussie : on ne laisse pas la prose prétendre le contraire
+            body = "Je n'ai rien modifié (voir ci-dessus)."
+        suffix = (f"\n\n(consulté : {', '.join(dict.fromkeys(s['tool'] for s in reads))})"
+                  if reads else "")
+        return JarvisReply("raisonnement", (head + body + suffix).strip(), True, "allow")
 
     def _advisory(self, message: str, granted: AutonomyLevel) -> JarvisReply:
         from .agents.advisory import AdvisoryBoard

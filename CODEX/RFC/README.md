@@ -37,6 +37,6 @@ Draft  →  In Review  →  Accepted  →  (donne lieu à ADR / implémentation)
 | [0015](RFC-0015-produits-plutot-que-prospection.md) | Devenir pros par ce qu'on crée — produits plutôt que prospection | Accepted |
 | [0016](RFC-0016-jarvis-local-rtx.md) | Le Jarvis local : RTX 5070 Ti — cerveau 14b (fait), voix Parakeet/Kokoro (chantier) | Accepted |
 | [0017](RFC-0017-mapping-ai-business-os.md) | PROMPT MASTER « AI Business OS » : mapping honnête + Comité C-suite (conseillers A1) | Accepted |
+| [0018](RFC-0018-le-cerveau-boucle-de-raisonnement.md) | Le cerveau : boucle de raisonnement ReAct (l'IA, pas la coquille) | Accepted |
 
 Gabarit : [`_template.md`](_template.md).
-| [0018](RFC-0018-le-cerveau-boucle-de-raisonnement.md) | Le cerveau : boucle de raisonnement ReAct (l'IA, pas la coquille) | Accepted |
