@@ -98,6 +98,13 @@ class Pulse:
         return items[:3]                     # briefing court, pas une todo-list complète
 
     def _watch_market(self) -> list[PulseItem]:
+        # respecte l'interrupteur : marché éteint = plus aucun appel réseau (anti-saturation)
+        try:
+            from .integrations.modules import ModuleRegistry
+            if not ModuleRegistry(self.ctx.memory).is_on("market"):
+                return []
+        except Exception:
+            pass
         now = self.clock()
         if now - self._last_market < MARKET_EVERY_S:
             return [i for i in self._last_items if i.kind == "market"]

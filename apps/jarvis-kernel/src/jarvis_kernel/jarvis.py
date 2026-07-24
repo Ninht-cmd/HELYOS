@@ -27,7 +27,7 @@ from .observability.tracing import span
 # Intentions reconnues. La classification renvoie l'une de ces étiquettes.
 INTENTS = ("portefeuille", "commandes", "tresorerie", "prospection", "relance_factures",
            "creer_business", "conseil", "recherche", "marche_financier", "simulation_trading",
-           "nvidia_lab", "open_source_lab", "action_dangereuse", "conversation")
+           "nvidia_lab", "open_source_lab", "modules", "action_dangereuse", "conversation")
 
 # Filet déterministe (marche sans LLM). Motifs verbe/sujet, pas simples mots-clés.
 # ORDRE VOLONTAIRE : les actions dangereuses sont testées EN PREMIER — « supprime mes
@@ -52,6 +52,8 @@ _RULES: list[tuple[str, str]] = [
     ("conseil", r"conseil|comit[ée]|\bceo\b|\bcfo\b|\bcto\b|\bcoo\b|\bcmo\b|\bciso\b|\bpdg\b|que (dit|conseille|pense)|ton avis|que ferais-tu"),
     ("nvidia_lab", r"\bnvidia\b|\bcuda\b|\bgpu\b|\bnemotron\b|\bollama\b|\bhugging\s*face\b|\brapids\b|\bholoscan\b|\btriton\b"),
     ("open_source_lab", r"open.?source|github.{0,20}(catalog|depot|repos?|clone)|depot[s]?.{0,20}github|repos?.{0,20}open"),
+    # interrupteurs on/off des modules — AVANT open_source (« active le module … »)
+    ("modules", r"\bmodules?\b|activ(e|er|é)|d[ée]sactiv|allum|[ée]tein|interrupteur|branche.{0,15}(module|outil)"),
     # la simulation (argent fictif) se distingue du marché réel et des ordres réels
     ("simulation_trading", r"simul|fictif|virtuel|paper.?trad"),
     # « marché » seul reste une étude de marché (recherche) ; la finance exige son lexique.
@@ -153,6 +155,8 @@ class Jarvis:
                 reply = self._nvidia_lab(granted)
             elif intent == "open_source_lab":
                 reply = self._open_source_lab(granted, message)
+            elif intent == "modules":
+                reply = self._modules(message)
             elif intent == "recherche":
                 reply = self._research(message, granted)
             elif intent == "marche_financier":
@@ -291,6 +295,57 @@ class Jarvis:
             f"  - Racine: {status['root']}"
         )
         return JarvisReply("nvidia_lab", text, True, v.decision.value)
+
+    def _modules(self, message: str) -> JarvisReply:
+        from .integrations.modules import DEFAULTS, ModuleRegistry
+
+        reg = ModuleRegistry(self.ctx.memory)
+        m = message.lower()
+        want_on = bool(re.search(r"activ|allum|branch|démarr|demarr", m))
+        want_off = bool(re.search(r"d[ée]sactiv|[ée]tein|coupe|arr[êe]te", m))
+        if want_on or want_off:
+            import unicodedata
+
+            def deac(s: str) -> str:
+                return "".join(c for c in unicodedata.normalize("NFD", s.lower())
+                               if unicodedata.category(c) != "Mn")
+
+            mm = deac(m)
+            _alias = {"market": ["marche", "bourse", "crypto"], "paper": ["simulation", "trading"],
+                      "advisory": ["comite", "conseil"]}
+            # quel module ? par clé, alias, ou 1er mot significatif du nom
+            target = None
+            for mod in DEFAULTS:
+                terms = [mod.key, deac(mod.name.split(" (")[0])] + _alias.get(mod.key, [])
+                if any(t and t in mm for t in terms):
+                    target = mod
+                    break
+            if target is None:
+                noms = ", ".join(mod.key for mod in DEFAULTS)
+                return JarvisReply("modules",
+                    f"Quel module allumer/éteindre ? Disponibles : {noms}.")
+            reg.toggle(target.key, want_on)
+            etat = "allumé" if want_on else "éteint"
+            extra = ""
+            if want_on and target.source == "local":
+                extra = (f"\nC'est un outil externe cloné chez toi ({target.path}). "
+                         f"Pour le démarrer réellement : {target.launch}. "
+                         "HELYOS le sondera et l'utilisera dès qu'il répondra.")
+            elif want_off and target.key == "market":
+                extra = "\nLe Pouls cesse de sonder le marché — moins d'appels réseau."
+            return JarvisReply("modules", f"Module « {target.name} » {etat}.{extra}")
+
+        # sinon : liste avec états
+        mods = reg.list(probe=True)
+        lines = ["Modules (● allumé / ○ éteint) :"]
+        for d in mods:
+            dot = "●" if d["enabled"] else "○"
+            run = ""
+            if d["enabled"] and d["source"] == "local":
+                run = " — en marche" if d.get("running") else " — à démarrer"
+            lines.append(f"  {dot} {d['name']} ({d['source']}){run}")
+        lines.append("Dis « active AnythingLLM » ou « éteins le marché » pour basculer.")
+        return JarvisReply("modules", "\n".join(lines))
 
     def _open_source_lab(self, granted: AutonomyLevel, message: str = "") -> JarvisReply:
         from .agents.open_source_lab import OpenSourceLabAgent

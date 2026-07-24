@@ -449,6 +449,28 @@ def orders_status(request: Request, body: dict) -> dict:
     return o.to_dict()
 
 
+@router.get("/modules", tags=["modules"])
+def modules_list(request: Request) -> dict:
+    """Registre des modules avec interrupteurs on/off (+ sonde des services locaux)."""
+    from ..integrations.modules import ModuleRegistry
+
+    reg = ModuleRegistry(_ctx(request).memory)
+    return {"summary": reg.summary(), "modules": reg.list(probe=True)}
+
+
+@router.post("/modules/toggle", tags=["modules"])
+def modules_toggle(request: Request, body: dict) -> dict:
+    """Allume/éteint un module (key + on:bool). Persisté ; anti-saturation."""
+    from ..integrations.modules import ModuleRegistry
+
+    try:
+        m = ModuleRegistry(_ctx(request).memory).toggle(
+            str(body.get("key", "")), bool(body.get("on", True)))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"key": m.key, "name": m.name, "enabled": bool(body.get("on", True))}
+
+
 @router.get("/library/search", tags=["library"])
 def library_search(request: Request, q: str = "") -> dict:
     """Cherche dans les dépôts open-source déjà téléchargés (catalogue local)."""
