@@ -152,7 +152,7 @@ class Jarvis:
             elif intent == "nvidia_lab":
                 reply = self._nvidia_lab(granted)
             elif intent == "open_source_lab":
-                reply = self._open_source_lab(granted)
+                reply = self._open_source_lab(granted, message)
             elif intent == "recherche":
                 reply = self._research(message, granted)
             elif intent == "marche_financier":
@@ -292,8 +292,28 @@ class Jarvis:
         )
         return JarvisReply("nvidia_lab", text, True, v.decision.value)
 
-    def _open_source_lab(self, granted: AutonomyLevel) -> JarvisReply:
+    def _open_source_lab(self, granted: AutonomyLevel, message: str = "") -> JarvisReply:
         from .agents.open_source_lab import OpenSourceLabAgent
+
+        # Si le fondateur cherche un repo POUR un besoin, on fouille le catalogue local
+        # (711 dépôts déjà téléchargés) au lieu de ne montrer qu'un compteur.
+        need = re.sub(r"(open.?source|repos?|d[ée]p[oô]ts?|github|catalog\w*|quel|cherche|"
+                      r"trouve|pour|un|une|le|la|les|des|de|du|faire|j'ai|quoi|comme)",
+                      " ", message, flags=re.IGNORECASE).strip()
+        if len(need) >= 3:
+            from .integrations.library import OpenSourceLibrary
+
+            hits = OpenSourceLibrary().search(need, limit=6)
+            if hits:
+                lines = [f"Dans tes dépôts open-source téléchargés, pour « {need} » :"]
+                for h in hits:
+                    tag = "✓ cloné en local" if h["cloned_local"] else "catalogué (pas cloné)"
+                    desc = (h["description"] or "").strip()[:90]
+                    lines.append(f"  • {h['full_name']} ({h['stars']}★, {h['language'] or '—'}) "
+                                 f"— {desc} [{tag}]")
+                lines.append("Un seul bien choisi vaut mieux que mille dormants.")
+                return JarvisReply("open_source_lab", "\n".join(lines))
+            # rien trouvé : on tombera sur le statut ci-dessous
 
         v, status = OpenSourceLabAgent().snapshot(self.ctx.governance, granted)
         if status is None:

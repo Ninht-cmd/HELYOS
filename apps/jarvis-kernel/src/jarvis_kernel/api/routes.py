@@ -449,6 +449,16 @@ def orders_status(request: Request, body: dict) -> dict:
     return o.to_dict()
 
 
+@router.get("/library/search", tags=["library"])
+def library_search(request: Request, q: str = "") -> dict:
+    """Cherche dans les dépôts open-source déjà téléchargés (catalogue local)."""
+    from ..integrations.library import OpenSourceLibrary
+
+    lib = OpenSourceLibrary()
+    return {"catalogued": lib.count(), "query": q,
+            "results": lib.search(q, limit=10) if q.strip() else []}
+
+
 @router.get("/ledger", tags=["ledger"])
 def ledger_summary(request: Request, business: str | None = None) -> dict:
     """Bilan de caisse réel : global, ou d'un business (`?business=Nom exact`)."""
