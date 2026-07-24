@@ -179,6 +179,22 @@
   @media(prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none!important;transition:none!important}
   }
+  /* ---- Mode JARVIS : le bouton et le halo cinématique de l'état vocal ---- */
+  .jarvisbtn{background:rgba(111,247,214,.08);border:1px solid rgba(111,247,214,.35);
+    color:var(--mint);border-radius:99px;padding:6px 14px;font:600 12.5px inherit;cursor:pointer;
+    letter-spacing:.5px;transition:.2s}
+  .jarvisbtn:hover{background:rgba(111,247,214,.16)}
+  .jarvisbtn.on{background:var(--mint);color:#04221b;box-shadow:0 0 0 0 rgba(111,247,214,.5);animation:jpulse 1.6s infinite}
+  .jarvisbtn[data-state="listening"]{background:#49b6ff;color:#04121f;border-color:#49b6ff}
+  .jarvisbtn[data-state="thinking"]{background:#b69bff;color:#140a2a;border-color:#b69bff}
+  .jarvisbtn[data-state="speaking"]{background:var(--mint);color:#04221b}
+  @keyframes jpulse{0%{box-shadow:0 0 0 0 rgba(111,247,214,.5)}70%{box-shadow:0 0 0 10px rgba(111,247,214,0)}100%{box-shadow:0 0 0 0 rgba(111,247,214,0)}}
+  /* halo au bord de l'écran selon l'état — le cockpit "respire" quand JARVIS écoute/parle */
+  body[data-voice="listening"]::after,body[data-voice="thinking"]::after,body[data-voice="speaking"]::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:2;transition:box-shadow .4s}
+  body[data-voice="listening"]::after{box-shadow:inset 0 0 120px rgba(73,182,255,.35)}
+  body[data-voice="thinking"]::after{box-shadow:inset 0 0 120px rgba(182,155,255,.35)}
+  body[data-voice="speaking"]::after{box-shadow:inset 0 0 140px rgba(111,247,214,.4)}
 </style>
 </head>
 <body class="home">
@@ -195,6 +211,8 @@
         <option>A3</option><option>A4</option><option>A5</option>
       </select>
     </label>
+    <button id="jarvis" class="jarvisbtn" type="button" data-state="idle"
+            aria-label="Mode JARVIS : conversation vocale mains-libres">🎙 JARVIS</button>
     <button id="voice" class="iconbtn" type="button" aria-label="Activer ou couper la voix d'HELYOS">🔊</button>
     <span id="ver">v—</span><a href="./board.html">pilotage</a><a href="/docs">API</a><a href="/info">info</a>
   </header>

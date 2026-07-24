@@ -62,6 +62,7 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
 
 const voiceBtn = $('#voice');
 let voiceOn = lsGet('helyos_voice') !== 'off';   // parle par défaut — bascule persistée
+let jarvisMode = false;                           // conversation vocale mains-libres (boucle)
 function renderVoiceBtn() {
   voiceBtn.textContent = voiceOn ? '🔊' : '🔇';
   voiceBtn.classList.toggle('off', !voiceOn);
@@ -88,7 +89,21 @@ function utter(clean) {
   const u = new SpeechSynthesisUtterance(clean);
   u.lang = 'fr-FR'; if (frVoice) u.voice = frVoice;
   u.rate = 1.05; u.pitch = 0.95;
+  u.onstart = () => setVoiceState('speaking');
+  u.onend = () => {
+    // Mode JARVIS : quand HELYOS a fini de parler, il se remet à t'écouter.
+    if (jarvisMode) { setVoiceState('listening'); setTimeout(() => window._listen && window._listen(), 250); }
+    else setVoiceState('idle');
+  };
   speechSynthesis.speak(u);
+}
+
+// pilote l'état visuel (idle | listening | thinking | speaking) — le cockpit respire
+function setVoiceState(s) {
+  document.body.dataset.voice = s;
+  const jb = document.getElementById('jarvis');
+  if (jb) jb.dataset.state = s;
+  if (s === 'listening' || s === 'speaking') spark();          // le cœur 3D réagit
 }
 
 let pendingSpeech = null;   // parole en attente du premier geste (politique autoplay)
@@ -112,22 +127,47 @@ for (const evt of ['pointerdown', 'keydown']) {
   });
 }
 
-/* ---------------- l'oreille (reconnaissance du navigateur — audio traité par son service) --- */
+/* ---------------- Mode JARVIS : l'oreille + la boucle de conversation mains-libres ---------------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const micBtn = $('#mic');
-if (!SR) {
-  micBtn.hidden = true;                                         // pas supporté : on ne fait pas semblant
+const jarvisBtn = $('#jarvis');
+let listening = false;
+
+if (!SR) {                              // navigateur sans reconnaissance : on ne fait pas semblant
+  if (micBtn) micBtn.hidden = true;
+  if (jarvisBtn) jarvisBtn.hidden = true;
 } else {
   const rec = new SR();
   rec.lang = 'fr-FR'; rec.interimResults = false; rec.maxAlternatives = 1;
-  let listening = false;
-  rec.onresult = e => { input.value = e.results[0][0].transcript; send(); };
-  rec.onend = () => { listening = false; micBtn.classList.remove('rec'); };
-  rec.onerror = () => { listening = false; micBtn.classList.remove('rec'); };
-  micBtn.onclick = () => {
-    if (listening) { rec.stop(); return; }
+
+  function listen() {
+    if (listening || busy) return;
     if ('speechSynthesis' in window) speechSynthesis.cancel();  // il se tait quand tu parles
-    try { rec.start(); listening = true; micBtn.classList.add('rec'); } catch (_) {}
+    try { rec.start(); listening = true; setVoiceState('listening'); micBtn && micBtn.classList.add('rec'); }
+    catch (_) {}
+  }
+  window._listen = listen;              // appelé par utter.onend pour boucler
+
+  rec.onresult = e => {
+    input.value = e.results[0][0].transcript;
+    setVoiceState('thinking');
+    send();                             // -> /jarvis (raisonnement inclus) -> speak(réponse) -> onend -> listen()
+  };
+  rec.onend = () => {
+    listening = false; micBtn && micBtn.classList.remove('rec');
+    // silence sans résultat en mode JARVIS : on se remet à écouter (sauf si on pense/parle)
+    if (jarvisMode && document.body.dataset.voice === 'listening') setTimeout(listen, 400);
+  };
+  rec.onerror = () => { listening = false; micBtn && micBtn.classList.remove('rec'); };
+
+  if (micBtn) micBtn.onclick = () => { if (listening) rec.stop(); else listen(); };
+
+  if (jarvisBtn) jarvisBtn.onclick = () => {
+    jarvisMode = !jarvisMode;
+    jarvisBtn.classList.toggle('on', jarvisMode);
+    jarvisBtn.textContent = jarvisMode ? '● JARVIS' : '🎙 JARVIS';
+    if (jarvisMode) { voiceOn = true; renderVoiceBtn(); listen(); }
+    else { rec.stop(); if ('speechSynthesis' in window) speechSynthesis.cancel(); setVoiceState('idle'); }
   };
 }
 
