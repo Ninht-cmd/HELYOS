@@ -449,6 +449,22 @@ def orders_status(request: Request, body: dict) -> dict:
     return o.to_dict()
 
 
+@router.post("/engineering/part", tags=["engineering"])
+def engineering_part(request: Request, body: dict) -> dict:
+    """Génère une pièce 3D paramétrique (STL) — box | cylindre | engrenage."""
+    from ..integrations.engineering import generate_part
+
+    return generate_part(str(body.get("kind", "box")), body.get("params") or {})
+
+
+@router.post("/engineering/calc", tags=["engineering"])
+def engineering_calc(request: Request, body: dict) -> dict:
+    """Calcul de mécanique (engrenage, poutre, boulon)."""
+    from ..integrations.engineering import mechanical
+
+    return mechanical(str(body.get("kind", "")), body.get("params") or {})
+
+
 @router.post("/agent/run", tags=["agent"])
 def agent_run(request: Request, body: dict) -> dict:
     """Le cerveau : donne un objectif, il choisit/enchaîne ses outils de lecture et raisonne."""

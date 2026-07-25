@@ -30,3 +30,4 @@ Thumbs.db
 # Artefacts locaux
 .coverage
 .claude/
+pieces_3d/

@@ -53,6 +53,8 @@ class ReasoningAgent(Agent):
             # --- INTERNET (lecture A1 : parcourir et connaître le monde) ---
             "cherche_web": self._t_web_search,
             "lis_page": self._t_web_fetch,
+            # --- INGÉNIERIE : calcul méca (A1) + génération de pièce 3D (A2) ---
+            "calcul_meca": self._t_meca,
             # --- ACTION (interne, réversible ; exige A2) : agir ---
             "enregistre_recette": self._a_recette,
             "enregistre_depense": self._a_depense,
@@ -62,10 +64,11 @@ class ReasoningAgent(Agent):
             "nouvelle_tache": self._a_nouvelle_tache,
             "active_module": self._a_active_module,
             "note_memoire": self._a_note,
+            "piece_3d": self._a_piece_3d,
         }
         self._actions = {"enregistre_recette", "enregistre_depense", "ajoute_prospect",
                          "coche_tache", "nouvelle_commande", "nouvelle_tache",
-                         "active_module", "note_memoire"}
+                         "active_module", "note_memoire", "piece_3d"}
 
     # ---- outils (lecture seule ; chaque appel renvoie un texte compact pour le LLM) ----
     def _t_portfolio(self, _arg: str) -> str:
@@ -146,6 +149,33 @@ class ReasoningAgent(Agent):
             return web_fetch(arg)[:900]
         except Exception:
             return "(lecture de page indisponible — réseau)"
+
+    # ---- ingénierie ----
+    @staticmethod
+    def _kv(arg: str):
+        """« engrenage dents=12 h=6 » -> ('engrenage', {dents:12, h:6})."""
+        toks = (arg or "").split()
+        kind = toks[0] if toks and "=" not in toks[0] else ""
+        params = {}
+        for t in toks:
+            m = re.match(r"([a-zA-Zéèz0-9_]+)[=:]([\d.]+)", t)
+            if m:
+                params[m.group(1).lower()] = m.group(2)
+        return kind, params
+
+    def _t_meca(self, arg: str) -> str:
+        from ..integrations.engineering import mechanical
+        kind, params = self._kv(arg)
+        r = mechanical(kind or arg, params)
+        return "; ".join(f"{k}={v}" for k, v in r.items())
+
+    def _a_piece_3d(self, arg: str) -> str:
+        from ..integrations.engineering import generate_part
+        kind, params = self._kv(arg)
+        if not self._gate(ActionType.WRITE_LOCAL, f"générer pièce 3D {kind or 'box'}"):
+            return "[refusé : lève l'autonomie à A2 pour que j'agisse]"
+        r = generate_part(kind or "box", params)
+        return f"pièce {r['kind']} générée : {r['path']} ({r['triangles']} triangles, {r['note']})"
 
     # ---- outils d'ACTION (interne, réversible ; passent par la gouvernance : A2 requis) ----
     def _gate(self, atype: ActionType, desc: str) -> bool:
@@ -325,6 +355,8 @@ class ReasoningAgent(Agent):
         "outils_mcp": "les serveurs MCP branchés (se branche à tout)",
         "cherche_web": "cherche sur Internet (marchés, e-commerce, ingénierie…) (arg=requête)",
         "lis_page": "lit une page web publique (arg=URL http(s))",
+        "calcul_meca": "calcul de méca (arg='engrenage z1=12 z2=36' | 'poutre F=100 L=1')",
+        "piece_3d": "génère une pièce 3D STL (arg='engrenage dents=12 h=6' | 'box l=40 h=10')",
         "enregistre_recette": "note une recette réelle (arg='business montant')",
         "enregistre_depense": "note une dépense (arg='business montant')",
         "ajoute_prospect": "ajoute un prospect (arg='nom')",
