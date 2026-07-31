@@ -41,9 +41,12 @@ _RULES: list[tuple[str, str]] = [
     ("action_dangereuse", r"supprim|efface|d[ée]truis|vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te\b|\bvends\b|\binvestis\b|donne.{0,10}droit|permission|privil[eè]g"),
     # commandes (les deux sens) et fournisseurs — AVANT tresorerie (« commande » ≠ « encaisse »)
     ("commandes", r"commande|fournisseur|\bachats?\b|\bventes?\b|\blivrer\b|\blivr[ée]e|carnet"),
-    # le cerveau : objectif multi-étapes qui demande de croiser plusieurs sources
+    # le cerveau : objectif multi-étapes, OU besoin d'aller chercher sur le web
+    # (« cherche sur internet X » doit ALLER chercher, pas répondre de mémoire — vécu à l'audit).
     ("raisonnement", r"que dois-je faire|analyse (ma|toute|la) situation|plan d'action|"
-                     r"\bma priorit[ée]|raisonne sur|objectif\s*[:\-]|croise (tout|les|mes)"),
+                     r"\bma priorit[ée]|raisonne sur|objectif\s*[:\-]|croise (tout|les|mes)|"
+                     r"cherche.{0,20}(internet|web|ligne|google)|sur (internet|le web)|recherche en ligne|"
+                     r"g[ée]n[èe]re.{0,15}(pi[èe]ce|stl|engrenage|3d)|calcul.{0,10}(m[ée]ca|engren|poutre|couple)"),
     # la caisse : noter une recette/dépense DÉJÀ réalisée, ou demander le bilan.
     # (« fais un virement » reste action_dangereuse : la règle du dessus passe d'abord.)
     ("tresorerie", r"encaiss|d[ée]pens|tr[ée]sorerie|\bbilan\b|\bsolde\b|combien.{0,20}(gagn|rapport)"),
