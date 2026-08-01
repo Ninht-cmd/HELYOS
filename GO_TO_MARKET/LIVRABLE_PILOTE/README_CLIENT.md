@@ -84,5 +84,33 @@ Inclus 30 jours après livraison : corrections de dysfonctionnements et une
 session de 30 min de prise en main. Évolutions : sur devis ou abonnement
 maintenance (150–400 €/mois selon périmètre).
 
+## 8. Version sans installation — `espace_chef.html`
+
+Pour le dirigeant qui veut **zéro serveur, zéro compte, zéro n8n** : un seul
+fichier à double-cliquer, qui s'ouvre dans son navigateur habituel. C'est un
+vrai outil de trésorerie, pas une démo :
+
+- **Registre de factures persistant** — saisie à la main (formulaire) **ou**
+  import copier-coller depuis Excel/Sheets **ou** chargement d'un `.csv`.
+  Tout est mémorisé dans le navigateur ; rien ne repart de zéro à la
+  réouverture.
+- **Tableau de bord** : montant en retard, total en attente, encaissé sur
+  30 jours, nombre de factures à relancer, retard moyen (DSO).
+- **Relances graduées** (mêmes 3 niveaux et mêmes textes que le moteur n8n —
+  une seule vérité) : on choisit le ton, on relit le message, on l'ouvre
+  **prêt** dans sa messagerie. C'est le dirigeant qui appuie sur Envoyer.
+- **Historique par facture**, pause anti-spam 6 jours, « marquer payée »,
+  édition, suppression, **export CSV** (sauvegarde) et impression de l'état
+  des impayés.
+
+**Confidentialité** : les données ne quittent jamais la page (stockage local
+du navigateur, aucun serveur). Rappel : ce mode ne s'exécute pas tout seul la
+nuit — c'est le mode n8n (sections 1–6) qui automatise l'envoi quotidien.
+Les deux modes sont complémentaires : `espace_chef.html` pour démarrer en
+5 minutes, n8n quand le volume justifie l'automatisation complète.
+
+*Vérifié : moteur testé de bout en bout (parsing, calculs KPI, escalade des
+niveaux, anti-spam, persistance après rechargement, export) — 18 contrôles au vert.*
+
 ---
 *Livré par [Agence] — construit et testé le [date]. Version pilote 1.0.*

@@ -3,177 +3,506 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Relances de factures — Espace dirigeant</title>
+<title>Trésorerie & Relances — Espace dirigeant</title>
 <style>
-  /* Espace DIRIGEANT : zéro installation, zéro identifiant, zéro jargon.
-     Les données ne quittent jamais cette page ; l'envoi s'ouvre dans SA messagerie. */
-  :root{--bg:#f6f8fa;--card:#fff;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;
-        --mint:#10b981;--mint-soft:#d1fae5;--amber:#f59e0b;--amber-soft:#fef3c7;
-        --coral:#ef4444;--coral-soft:#fee2e2}
+  /* Espace DIRIGEANT — zéro installation, zéro identifiant, zéro jargon.
+     Vos factures restent DANS cette page (localStorage du navigateur, aucun serveur).
+     « Relancer » ouvre le message prêt dans VOTRE messagerie : c'est vous qui envoyez. */
+  :root{
+    --bg:#f4f6f9;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e5e7eb;
+    --brand:#0f766e;--brand-ink:#0b5a54;
+    --mint:#10b981;--mint-soft:#d1fae5;--mint-ink:#065f46;
+    --amber:#f59e0b;--amber-soft:#fef3c7;--amber-ink:#92400e;
+    --coral:#ef4444;--coral-soft:#fee2e2;--coral-ink:#991b1b;
+    --slate-soft:#eef2f7;--slate-ink:#475569;
+  }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Inter,sans-serif;
-       max-width:860px;margin:0 auto;padding:28px 18px 60px}
-  h1{font-size:22px;margin-bottom:4px}
-  .sub{color:var(--muted);font-size:13.5px;margin-bottom:24px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
-        padding:18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(16,24,40,.06)}
-  .card h2{font-size:15px;margin-bottom:10px}
-  .hint{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:10px}
-  textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:10px;
-           padding:10px;font:12.5px ui-monospace,Consolas,monospace;resize:vertical}
-  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--mint);color:#fff;
-       border:0;border-radius:10px;padding:10px 16px;font:600 13.5px inherit;cursor:pointer;margin-top:10px}
+  body{background:var(--bg);color:var(--ink);
+       font-family:-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
+       max-width:1040px;margin:0 auto;padding:22px 16px 72px;-webkit-text-size-adjust:100%}
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  header .logo{width:38px;height:38px;border-radius:10px;background:var(--brand);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px}
+  h1{font-size:20px;line-height:1.15}
+  h1 small{display:block;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:2px}
+  .ent{margin-left:auto;font-size:13px;color:var(--muted)}
+  .ent input{border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;font-size:13px;
+    color:var(--ink);background:#fff;width:190px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0 14px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .kpi .v{font-size:21px;font-weight:750;letter-spacing:-.02em}
+  .kpi .l{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .kpi.hot .v{color:var(--coral-ink)}
+  .kpi.good .v{color:var(--mint-ink)}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px}
+  .tabs button{border:0;background:transparent;color:var(--muted);font:600 12.5px inherit;
+    padding:6px 11px;border-radius:8px;cursor:pointer}
+  .tabs button.on{background:var(--brand);color:#fff}
+  .spacer{flex:1}
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--brand);color:#fff;
+    border:0;border-radius:10px;padding:9px 14px;font:600 13px inherit;cursor:pointer}
   .btn:hover{filter:brightness(1.07)}
   .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
-  .btn.small{padding:7px 12px;font-size:12.5px;margin-top:0}
-  .inv{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
-  .inv .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .inv b{font-size:14px}
-  .pill{font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 8px}
-  .n1{background:var(--mint-soft);color:#065f46}
-  .n2{background:var(--amber-soft);color:#92400e}
-  .n3{background:var(--coral-soft);color:#991b1b}
-  .done{background:#eef2f7;color:#64748b}
-  .inv .sum{margin-left:auto;font-weight:700}
-  details{margin-top:8px}
-  summary{font-size:12.5px;color:var(--muted);cursor:pointer}
-  .mail{white-space:pre-wrap;font-size:12.5px;background:var(--bg);border:1px solid var(--line);
-        border-radius:8px;padding:10px;margin-top:8px;line-height:1.55}
-  .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-  .empty{color:var(--muted);font-size:13px;padding:8px 0}
-  .foot{font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:22px;text-align:center}
-  .kpis{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
-  .kpi{flex:1;min-width:140px;background:var(--card);border:1px solid var(--line);
-       border-radius:12px;padding:12px 14px}
-  .kpi .v{font-size:20px;font-weight:750}
-  .kpi .l{font-size:11.5px;color:var(--muted)}
+  .btn.small{padding:6px 11px;font-size:12px;border-radius:9px}
+  .btn.danger{background:#fff;color:var(--coral-ink);border:1px solid var(--coral-soft)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;
+    box-shadow:0 1px 3px rgba(16,24,40,.05)}
+  .card h2{font-size:14px;margin-bottom:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+  label.f{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--muted)}
+  label.f input,label.f select{border:1px solid var(--line);border-radius:9px;padding:8px 10px;
+    font:inherit;font-size:13px;color:var(--ink);background:#fff}
+  .hint{font-size:12px;color:var(--muted);line-height:1.55;margin:2px 0 10px}
+  textarea{width:100%;min-height:96px;border:1px solid var(--line);border-radius:10px;padding:10px;
+    font:12.5px ui-monospace,Consolas,monospace;resize:vertical;color:var(--ink)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:left;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);
+    padding:0 10px 8px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+  thead th.num{text-align:right}
+  tbody td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tbody td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:650}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr.paid{opacity:.6}
+  .cli{font-weight:650}
+  .cli small{display:block;color:var(--muted);font-weight:400;font-size:11.5px}
+  .pill{display:inline-block;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 8px;white-space:nowrap}
+  .n1{background:var(--mint-soft);color:var(--mint-ink)}
+  .n2{background:var(--amber-soft);color:var(--amber-ink)}
+  .n3{background:var(--coral-soft);color:var(--coral-ink)}
+  .paidp{background:var(--mint-soft);color:var(--mint-ink)}
+  .litp{background:var(--slate-soft);color:var(--slate-ink)}
+  .pausep{background:var(--slate-soft);color:var(--slate-ink)}
+  .waitp{background:var(--slate-soft);color:var(--slate-ink)}
+  .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .empty{color:var(--muted);font-size:13px;padding:26px 8px;text-align:center}
+  .foot{font-size:11.5px;color:var(--muted);line-height:1.65;margin-top:22px;text-align:center}
+  .foot b{color:var(--slate-ink)}
+  /* modal */
+  .ov{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;
+    padding:16px;z-index:50}
+  .ov.show{display:flex}
+  .modal{background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;
+    padding:20px;box-shadow:0 20px 60px rgba(15,23,42,.3)}
+  .modal h3{font-size:16px;margin-bottom:4px}
+  .modal .mail{white-space:pre-wrap;font-size:12.5px;background:var(--bg);border:1px solid var(--line);
+    border-radius:10px;padding:12px;margin:10px 0;line-height:1.55;max-height:280px;overflow:auto}
+  .modal .rrow{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
+  .hist{font-size:11.5px;color:var(--muted);margin-top:8px}
+  .lvlsel{display:flex;gap:6px;margin:8px 0}
+  .lvlsel button{flex:1;border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px;
+    font:600 12px inherit;color:var(--muted);cursor:pointer}
+  .lvlsel button.on{border-color:var(--brand);color:var(--brand-ink);background:#f0fdfa}
+  @media(max-width:640px){
+    .hide-sm{display:none}
+    thead{display:none}
+    tbody td{display:block;border:0;padding:4px 0}
+    tbody tr{display:block;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+    tbody td.num{text-align:left}
+    .acts{justify-content:flex-start;margin-top:8px}
+  }
 </style>
 </head>
 <body>
-  <h1>Relances de factures</h1>
-  <p class="sub">Espace dirigeant — [Votre entreprise]. Collez vos factures, validez, c'est envoyé depuis <b>votre</b> messagerie.</p>
+  <header>
+    <div class="logo">€</div>
+    <h1>Trésorerie &amp; Relances<small>Espace dirigeant — vos factures, vos encaissements, sous votre contrôle</small></h1>
+    <div class="ent">Entreprise&nbsp;: <input id="ent" placeholder="Votre entreprise" oninput="setEnt(this.value)"></div>
+  </header>
 
-  <div class="kpis" id="kpis" hidden>
-    <div class="kpi"><div class="v" id="k-total">0 €</div><div class="l">en attente de paiement</div></div>
-    <div class="kpi"><div class="v" id="k-count">0</div><div class="l">facture(s) à relancer</div></div>
-    <div class="kpi"><div class="v" id="k-done">0</div><div class="l">relance(s) faites (30 j)</div></div>
+  <div class="kpis">
+    <div class="kpi hot"><div class="v" id="k-retard">0 €</div><div class="l">en retard de paiement</div></div>
+    <div class="kpi"><div class="v" id="k-attente">0 €</div><div class="l">total en attente</div></div>
+    <div class="kpi good"><div class="v" id="k-encaisse">0 €</div><div class="l">encaissé (30 j)</div></div>
+    <div class="kpi"><div class="v" id="k-relancer">0</div><div class="l">à relancer aujourd'hui</div></div>
+    <div class="kpi"><div class="v" id="k-dso">—</div><div class="l">retard moyen (jours)</div></div>
   </div>
 
-  <div class="card">
-    <h2>1 · Vos factures</h2>
-    <p class="hint">Copiez-collez depuis Excel / Google Sheets (colonnes : <b>client, email,
-    n° facture, montant, échéance AAAA-MM-JJ, statut</b>). Une ligne par facture —
-    séparateur virgule, point-virgule ou tabulation, peu importe.</p>
-    <textarea id="src" placeholder="Dupont SARL, compta@dupont.fr, F-2026-041, 1250, 2026-06-12,
+  <div class="bar">
+    <div class="tabs" id="tabs">
+      <button data-f="relancer" class="on">À relancer</button>
+      <button data-f="retard">En retard</button>
+      <button data-f="attente">En attente</button>
+      <button data-f="payee">Payées</button>
+      <button data-f="all">Toutes</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" onclick="openAdd()">+ Ajouter une facture</button>
+    <button class="btn ghost small" onclick="toggle('importCard')">Importer</button>
+    <button class="btn ghost small" onclick="exportCSV()">Exporter CSV</button>
+    <button class="btn ghost small" onclick="window.print()">Imprimer l'état</button>
+  </div>
+
+  <div class="card" id="importCard" hidden>
+    <h2>Importer depuis Excel / Google Sheets</h2>
+    <p class="hint">Copiez-collez vos lignes (colonnes : <b>client, email, n° facture, montant, échéance AAAA-MM-JJ, statut</b>) —
+      séparateur virgule, point-virgule ou tabulation. Ou chargez un fichier <b>.csv</b>. Les factures déjà présentes
+      (même n°) sont mises à jour sans perdre leur historique de relances.</p>
+    <textarea id="src" placeholder="Dupont SARL, compta@dupont.fr, F-2026-041, 1250, 2026-06-12
 Martin & Fils; martin@fils.fr; F-2026-038; 480; 2026-06-25; payée"></textarea>
-    <button class="btn" onclick="analyse()">Analyser mes factures</button>
-    <button class="btn ghost" onclick="demo()">Voir avec un exemple</button>
+    <div class="bar" style="margin-top:10px">
+      <button class="btn" onclick="importPaste()">Importer ces lignes</button>
+      <label class="btn ghost small" style="cursor:pointer">Charger un .csv
+        <input type="file" accept=".csv,text/csv,text/plain" onchange="importFile(event)" hidden>
+      </label>
+      <button class="btn ghost small" onclick="loadDemo()">Charger un exemple</button>
+    </div>
   </div>
 
   <div class="card">
-    <h2>2 · Relances proposées — vous validez, rien ne part sans vous</h2>
-    <div id="list"><div class="empty">Collez vos factures ci-dessus puis cliquez « Analyser ».</div></div>
+    <table>
+      <thead>
+        <tr>
+          <th data-s="client">Client</th>
+          <th data-s="num" class="hide-sm">Facture</th>
+          <th data-s="echeance">Échéance</th>
+          <th data-s="retard" class="num">Retard</th>
+          <th data-s="montant" class="num">Montant</th>
+          <th>Statut / action</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty">Aucune facture pour l'instant. Cliquez « + Ajouter une facture » ou « Importer ».</div>
   </div>
 
-  <p class="foot">🔒 Vos données ne quittent pas cette page (aucun serveur, aucun compte).
-  « Envoyer » ouvre le message <b>prêt</b> dans votre messagerie habituelle — c'est vous qui
-  appuyez sur Envoyer. Anti-spam : un client déjà relancé depuis moins de 6 jours est mis en pause.
-  <br>Installé par [Votre agence] · propulsé par une IA sous contrôle humain</p>
+  <p class="foot">
+    🔒 <b>Vos données ne quittent jamais cette page</b> — tout est stocké dans ce navigateur (aucun serveur, aucun compte).
+    « Relancer » ouvre le message <b>prêt</b> dans votre messagerie habituelle : c'est <b>vous</b> qui appuyez sur Envoyer.
+    Un client déjà relancé depuis moins de 6&nbsp;jours est mis en pause (anti-spam).
+    <br>Sauvegardez régulièrement via « Exporter CSV ». · Propulsé par une IA sous contrôle humain — HELYOS
+  </p>
+
+  <!-- Modal ajout / édition -->
+  <div class="ov" id="ovEdit">
+    <div class="modal">
+      <h3 id="editTitle">Ajouter une facture</h3>
+      <p class="hint">Les champs marqués * sont nécessaires pour relancer.</p>
+      <div class="grid">
+        <label class="f">Client * <input id="e-client"></label>
+        <label class="f">Email du client * <input id="e-email" type="email" placeholder="compta@client.fr"></label>
+        <label class="f">N° de facture * <input id="e-num" placeholder="F-2026-041"></label>
+        <label class="f">Montant TTC (€) * <input id="e-montant" type="number" min="0" step="0.01"></label>
+        <label class="f">Date d'émission <input id="e-emission" type="date"></label>
+        <label class="f">Échéance * <input id="e-echeance" type="date"></label>
+        <label class="f">Statut
+          <select id="e-statut">
+            <option value="attente">En attente</option>
+            <option value="payee">Payée</option>
+            <option value="litige">Litige / en pause</option>
+          </select>
+        </label>
+      </div>
+      <div class="rrow" style="margin-top:14px">
+        <button class="btn ghost" onclick="closeOv('ovEdit')">Annuler</button>
+        <button class="btn" onclick="saveEdit()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal relance -->
+  <div class="ov" id="ovRel">
+    <div class="modal">
+      <h3>Relance — <span id="r-client"></span></h3>
+      <p class="hint" id="r-info"></p>
+      <div class="lvlsel" id="r-lvls"></div>
+      <div class="mail" id="r-mail"></div>
+      <div class="hist" id="r-hist"></div>
+      <div class="rrow">
+        <button class="btn ghost" onclick="closeOv('ovRel')">Fermer</button>
+        <button class="btn ghost small" onclick="copyMail()">Copier le texte</button>
+        <button class="btn" onclick="sendRelance()">✉ Ouvrir dans ma messagerie</button>
+      </div>
+    </div>
+  </div>
 
 <script>
+"use strict";
 const $ = s => document.querySelector(s);
 const DAY = 86400000;
+const KEY = "helyos_factures_v1";
+const KENT = "helyos_entreprise";
 const esc = s => String(s).replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch(_){ return {}; } };
-const lsSet = (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(_){} };
+const eur = n => (Number(n)||0).toLocaleString('fr-FR',{maximumFractionDigits:0}) + ' €';
+const uid = () => 'f' + (state.seq++).toString(36) + Math.floor(performance.now()).toString(36);
+const today0 = () => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); };
 
-// mêmes règles et mêmes textes que le moteur (workflow n8n) : une seule vérité
-function compose(f, late) {
-  const lvl = late >= 30 ? 3 : late >= 14 ? 2 : 1;
-  const m = Number(f.montant).toFixed(2);
-  const obj = {1:`Facture ${f.num} — échéance dépassée`,
-               2:`Relance : facture ${f.num} (${m} €) en attente`,
-               3:`Dernier rappel avant mise en demeure — facture ${f.num}`}[lvl];
+/* ---------- état persistant ---------- */
+let state = { seq:1, factures:[] };
+let filter = "relancer";
+let sortKey = "retard", sortDir = -1;
+let editId = null, relId = null, relLvl = null;
+
+function load(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(KEY) || "null");
+    if(raw && Array.isArray(raw.factures)){ state = raw; if(!state.seq) state.seq = state.factures.length+1; }
+  }catch(_){}
+  $('#ent').value = localStorage.getItem(KENT) || "";
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(_){ alert("Stockage plein : exportez puis allégez la liste."); } }
+function setEnt(v){ try{ localStorage.setItem(KENT, v); }catch(_){} }
+
+/* ---------- règles de relance (une seule vérité, alignée sur le moteur n8n) ---------- */
+function lateDays(f){
+  const t = new Date(f.echeance).getTime();
+  if(isNaN(t)) return null;
+  return Math.floor((today0() - t) / DAY);
+}
+// niveau = escalade avec le retard ET le nombre de relances déjà envoyées (max 3)
+function levelFor(f, late){
+  const byLate = late >= 30 ? 3 : late >= 14 ? 2 : 1;
+  const bySent = (f.relances ? f.relances.length : 0) + 1;
+  return Math.min(3, Math.max(byLate, bySent));
+}
+function compose(f, late, lvl){
+  const m = eur(f.montant);
+  const num = f.num || "(sans numéro)";
+  const due = f.echeance || "l'échéance convenue";
+  const obj = {1:`Facture ${num} — échéance dépassée`,
+               2:`Relance : facture ${num} (${m}) en attente`,
+               3:`Dernier rappel avant mise en demeure — facture ${num}`}[lvl];
   const body = {
-    1:`Bonjour ${f.client},\n\nSauf erreur de notre part, la facture ${f.num} de ${m} €, échue le ${f.due}, reste en attente de règlement.\n\nSi le paiement est déjà parti, merci d'ignorer ce message.\n\nBien cordialement`,
-    2:`Bonjour ${f.client},\n\nMalgré notre précédent message, la facture ${f.num} de ${m} € (échue le ${f.due}) demeure impayée (${late} jours de retard).\n\nMerci de procéder au règlement sous 7 jours, ou de nous indiquer la difficulté — nous trouverons une solution.\n\nBien cordialement`,
-    3:`Bonjour ${f.client},\n\nLa facture ${f.num} de ${m} € est impayée depuis ${late} jours malgré nos relances.\n\nSans règlement ou réponse sous 8 jours, nous devrons engager une procédure de recouvrement. Nous préférerions l'éviter.\n\nCordialement`}[lvl];
-  return { lvl, obj, body };
+    1:`Bonjour ${f.client},\n\nSauf erreur de notre part, la facture ${num} de ${m}, échue le ${due}, reste en attente de règlement.\n\nSi le paiement est déjà parti, merci d'ignorer ce message.\n\nBien cordialement`,
+    2:`Bonjour ${f.client},\n\nMalgré notre précédent message, la facture ${num} de ${m} (échue le ${due}) demeure impayée (${late} jours de retard).\n\nMerci de procéder au règlement sous 7 jours, ou de nous indiquer la difficulté — nous trouverons une solution.\n\nBien cordialement`,
+    3:`Bonjour ${f.client},\n\nLa facture ${num} de ${m} est impayée depuis ${late} jours malgré nos relances.\n\nSans règlement ou réponse sous 8 jours, nous devrons engager une procédure de recouvrement. Nous préférerions l'éviter.\n\nCordialement`}[lvl];
+  return { obj, body };
+}
+function paused(f){
+  const r = f.relances || [];
+  if(!r.length) return false;
+  return (Date.now() - r[r.length-1]) / DAY < 6;
+}
+// une facture "à relancer" : en attente, échue depuis >=7 j, pas en pause
+function toRelance(f){
+  if(f.statut !== "attente") return false;
+  const late = lateDays(f);
+  return late !== null && late >= 7 && !paused(f);
 }
 
-function parse(text) {
-  return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
-    const p = l.split(/[;,\t]/).map(x => x.trim());
-    return { client: p[0]||'', email: p[1]||'', num: p[2]||'', montant: p[3]||'0',
-             due: p[4]||'', statut: (p[5]||'').toLowerCase() };
-  }).filter(f => f.client && f.email && f.due);
-}
-
-function analyse() {
-  const now = Date.now();
-  const journal = lsGet('relances_journal');
-  const rows = parse($('#src').value);
-  const items = [];
-  let total = 0;
-  for (const f of rows) {
-    if (f.statut.includes('pay') || f.statut.includes('accord')) continue;
-    const late = Math.floor((now - new Date(f.due).getTime()) / DAY);
-    if (isNaN(late) || late < 7) continue;
-    total += Number(f.montant) || 0;
-    const last = journal[f.num];
-    const paused = last && (now - last) / DAY < 6;
-    items.push({ f, late, paused, ...compose(f, late) });
+/* ---------- rendu ---------- */
+function kpis(){
+  const now = today0();
+  let retard=0, attente=0, encaisse=0, aRelancer=0, sumLate=0, nLate=0;
+  for(const f of state.factures){
+    const late = lateDays(f);
+    if(f.statut === "payee"){
+      if(f.paidAt && (Date.now()-f.paidAt)/DAY <= 30) encaisse += Number(f.montant)||0;
+      continue;
+    }
+    if(f.statut === "attente"){
+      attente += Number(f.montant)||0;
+      if(late !== null && late > 0){ retard += Number(f.montant)||0; sumLate += late; nLate++; }
+      if(toRelance(f)) aRelancer++;
+    }
   }
-  const doneCount = Object.values(journal).filter(t => (now - t) / DAY <= 30).length;
-  $('#kpis').hidden = false;
-  $('#k-total').textContent = total.toLocaleString('fr-FR') + ' €';
-  $('#k-count').textContent = items.filter(i => !i.paused).length;
-  $('#k-done').textContent = doneCount;
-  $('#list').innerHTML = items.length ? items.map((it, i) => `
-    <div class="inv" id="inv-${i}">
-      <div class="top">
-        <b>${esc(it.f.client)}</b>
-        <span class="pill n${it.lvl}">${it.paused ? '' : 'relance ' + it.lvl + ' · '}${it.late} j de retard</span>
-        ${it.paused ? '<span class="pill done">déjà relancé — pause anti-spam</span>' : ''}
-        <span class="sum">${Number(it.f.montant).toLocaleString('fr-FR')} €</span>
-      </div>
-      <details><summary>Lire le message qui sera proposé</summary>
-        <div class="mail"><b>Objet :</b> ${esc(it.obj)}\n\n${esc(it.body)}</div>
-      </details>
-      ${it.paused ? '' : `<div class="row">
-        <button class="btn small" onclick="envoyer(${i})">✉ Envoyer depuis ma messagerie</button>
-        <button class="btn ghost small" onclick="ignorer(${i})">Ignorer cette fois</button>
-      </div>`}
-    </div>`).join('')
-    : '<div class="empty">Bonne nouvelle : aucune facture ne nécessite de relance aujourd\'hui.</div>';
-  window._items = items;
+  $('#k-retard').textContent   = eur(retard);
+  $('#k-attente').textContent  = eur(attente);
+  $('#k-encaisse').textContent = eur(encaisse);
+  $('#k-relancer').textContent = aRelancer;
+  $('#k-dso').textContent      = nLate ? Math.round(sumLate/nLate) : "—";
+}
+function matchesFilter(f){
+  const late = lateDays(f);
+  switch(filter){
+    case "relancer": return toRelance(f);
+    case "retard":   return f.statut==="attente" && late!==null && late>0;
+    case "attente":  return f.statut==="attente";
+    case "payee":    return f.statut==="payee";
+    default:         return true;
+  }
+}
+function sortVal(f,k){
+  if(k==="retard")  return lateDays(f) ?? -9999;
+  if(k==="montant") return Number(f.montant)||0;
+  if(k==="echeance")return new Date(f.echeance).getTime()||0;
+  return String(f[k]||"").toLowerCase();
+}
+function render(){
+  kpis();
+  const list = state.factures.filter(matchesFilter).sort((a,b)=>{
+    const va=sortVal(a,sortKey), vb=sortVal(b,sortKey);
+    if(va<vb) return -sortDir; if(va>vb) return sortDir; return 0;
+  });
+  const tb = $('#rows');
+  $('#empty').style.display = list.length ? "none" : "block";
+  tb.innerHTML = list.map(f=>{
+    const late = lateDays(f);
+    let statut;
+    if(f.statut==="payee") statut = `<span class="pill paidp">payée</span>`;
+    else if(f.statut==="litige") statut = `<span class="pill litp">litige / pause</span>`;
+    else if(paused(f)) statut = `<span class="pill pausep">relancé — pause 6 j</span>`;
+    else if(late!==null && late>=7){ const lvl=levelFor(f,late); statut = `<span class="pill n${lvl}">relance ${lvl} prête</span>`; }
+    else if(late!==null && late>0) statut = `<span class="pill waitp">${late} j — bientôt</span>`;
+    else statut = `<span class="pill waitp">à échoir</span>`;
+    const retardTxt = (late===null) ? "—" : late>0 ? `${late} j` : `<span style="color:var(--muted)">${late} j</span>`;
+    const nrel = (f.relances||[]).length;
+    const acts = [];
+    if(f.statut==="attente"){
+      if(late!==null && late>=7 && !paused(f)) acts.push(`<button class="btn small" onclick="openRel('${f.id}')">Relancer</button>`);
+      acts.push(`<button class="btn ghost small" onclick="markPaid('${f.id}')">Payée</button>`);
+    }
+    acts.push(`<button class="btn ghost small" onclick="openEdit('${f.id}')">✎</button>`);
+    acts.push(`<button class="btn danger small" onclick="del('${f.id}')">🗑</button>`);
+    return `<tr class="${f.statut==='payee'?'paid':''}">
+      <td><div class="cli">${esc(f.client)}<small>${esc(f.email||'—')}${nrel?` · ${nrel} relance(s)`:''}</small></div></td>
+      <td class="hide-sm">${esc(f.num||'—')}</td>
+      <td>${esc(f.echeance||'—')}</td>
+      <td class="num">${retardTxt}</td>
+      <td class="num">${eur(f.montant)}</td>
+      <td><div class="acts">${statut}${acts.join('')}</div></td>
+    </tr>`;
+  }).join("");
 }
 
-function envoyer(i) {
-  const it = window._items[i];
-  const url = 'mailto:' + encodeURIComponent(it.f.email)
-    + '?subject=' + encodeURIComponent(it.obj)
-    + '&body=' + encodeURIComponent(it.body);
-  const journal = lsGet('relances_journal');
-  journal[it.f.num] = Date.now();
-  lsSet('relances_journal', journal);
-  document.getElementById('inv-' + i).style.opacity = .55;
-  location.href = url;                 // ouvre Gmail/Outlook prérempli — LUI appuie sur Envoyer
+/* ---------- CRUD ---------- */
+function openAdd(){ editId=null; $('#editTitle').textContent="Ajouter une facture";
+  ["client","email","num","montant","emission","echeance"].forEach(k=>$('#e-'+k).value="");
+  $('#e-statut').value="attente"; showOv('ovEdit'); $('#e-client').focus(); }
+function openEdit(id){ const f=state.factures.find(x=>x.id===id); if(!f) return; editId=id;
+  $('#editTitle').textContent="Modifier la facture";
+  $('#e-client').value=f.client||""; $('#e-email').value=f.email||""; $('#e-num').value=f.num||"";
+  $('#e-montant').value=f.montant||""; $('#e-emission').value=f.emission||""; $('#e-echeance').value=f.echeance||"";
+  $('#e-statut').value=f.statut||"attente"; showOv('ovEdit'); }
+function saveEdit(){
+  const g=k=>$('#e-'+k).value.trim();
+  const client=g('client'), email=g('email');
+  if(!client){ alert("Le nom du client est nécessaire."); return; }
+  const data={ client, email, num:g('num'), montant:Number(g('montant'))||0,
+    emission:g('emission'), echeance:g('echeance'), statut:$('#e-statut').value };
+  if(editId){ const f=state.factures.find(x=>x.id===editId); Object.assign(f,data);
+    if(f.statut==="payee" && !f.paidAt) f.paidAt=Date.now();
+    if(f.statut!=="payee") f.paidAt=null;
+  } else {
+    data.id=uid(); data.relances=[]; data.created=Date.now();
+    if(data.statut==="payee") data.paidAt=Date.now();
+    state.factures.push(data);
+  }
+  save(); render(); closeOv('ovEdit');
+}
+function markPaid(id){ const f=state.factures.find(x=>x.id===id); if(!f) return;
+  f.statut="payee"; f.paidAt=Date.now(); save(); render(); }
+function del(id){ const f=state.factures.find(x=>x.id===id); if(!f) return;
+  if(!confirm(`Supprimer la facture de ${f.client} (${eur(f.montant)}) ? Cette action est définitive.`)) return;
+  state.factures=state.factures.filter(x=>x.id!==id); save(); render(); }
+
+/* ---------- relance ---------- */
+function openRel(id){
+  const f=state.factures.find(x=>x.id===id); if(!f) return;
+  relId=id; const late=lateDays(f); relLvl=levelFor(f,late);
+  $('#r-client').textContent=f.client;
+  $('#r-info').innerHTML=`Facture <b>${esc(f.num||'—')}</b> · ${eur(f.montant)} · <b>${late} jours</b> de retard. `+
+    `Choisissez le ton, vérifiez le message, puis ouvrez-le dans votre messagerie.`;
+  $('#r-lvls').innerHTML=[1,2,3].map(l=>`<button data-l="${l}" class="${l===relLvl?'on':''}" onclick="setLvl(${l})">${
+    ({1:'Rappel courtois',2:'Relance ferme',3:'Avant recouvrement'})[l]}</button>`).join('');
+  const r=(f.relances||[]);
+  $('#r-hist').textContent = r.length ? "Déjà relancé : "+r.map(t=>new Date(t).toLocaleDateString('fr-FR')).join(", ") : "Première relance.";
+  renderMail();
+  showOv('ovRel');
+}
+function setLvl(l){ relLvl=l; document.querySelectorAll('#r-lvls button').forEach(b=>b.classList.toggle('on',+b.dataset.l===l)); renderMail(); }
+function renderMail(){
+  const f=state.factures.find(x=>x.id===relId); const late=lateDays(f);
+  const {obj,body}=compose(f,late,relLvl);
+  $('#r-mail').textContent=`Objet : ${obj}\n\n${body}`;
+}
+function currentMail(){
+  const f=state.factures.find(x=>x.id===relId); const late=lateDays(f);
+  return {f, ...compose(f,late,relLvl)};
+}
+function sendRelance(){
+  const {f,obj,body}=currentMail();
+  f.relances=f.relances||[]; f.relances.push(Date.now());
+  save(); render();
+  const url='mailto:'+encodeURIComponent(f.email||'')+'?subject='+encodeURIComponent(obj)+'&body='+encodeURIComponent(body);
+  closeOv('ovRel');
+  location.href=url;  // ouvre Gmail/Outlook prérempli — le dirigeant appuie sur Envoyer
+}
+function copyMail(){
+  const {obj,body}=currentMail();
+  const txt=`Objet : ${obj}\n\n${body}`;
+  if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(()=>flash("Message copié")); }
+  else { const t=$('#r-mail'); const r=document.createRange(); r.selectNode(t);
+    getSelection().removeAllRanges(); getSelection().addRange(r); document.execCommand('copy'); flash("Message copié"); }
+}
+let flashT;
+function flash(msg){ clearTimeout(flashT); let el=$('#flash');
+  if(!el){ el=document.createElement('div'); el.id='flash';
+    el.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;z-index:99;box-shadow:0 6px 20px rgba(0,0,0,.25)';
+    document.body.appendChild(el); }
+  el.textContent=msg; el.style.opacity='1'; flashT=setTimeout(()=>el.style.opacity='0',1600);
 }
 
-function ignorer(i) { document.getElementById('inv-' + i).style.display = 'none'; }
-
-function demo() {
-  const d = new Date(Date.now() - 16 * DAY).toISOString().slice(0, 10);
-  const d2 = new Date(Date.now() - 9 * DAY).toISOString().slice(0, 10);
-  const d3 = new Date(Date.now() - 35 * DAY).toISOString().slice(0, 10);
-  $('#src').value = `Dupont SARL, compta@dupont.fr, F-2026-041, 1250, ${d}
-Martin & Fils, martin@fils.fr, F-2026-038, 480, ${d2}
-Bâti Sud, contact@batisud.fr, F-2026-022, 2300, ${d3}
-Payée SA, ok@payee.fr, F-2026-040, 900, ${d}, payée`;
-  analyse();
+/* ---------- import / export ---------- */
+function parseRows(text){
+  return text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
+    const p=l.split(/[;,\t]/).map(x=>x.trim());
+    return { client:p[0]||"", email:p[1]||"", num:p[2]||"",
+      montant:Number((p[3]||"0").replace(/[^\d.,-]/g,'').replace(',','.'))||0,
+      echeance:p[4]||"", statut:normStatut(p[5]) };
+  }).filter(f=>f.client);
 }
+function normStatut(s){ s=(s||"").toLowerCase();
+  if(s.includes('pay')||s.includes('encaiss')||s.includes('accord')) return "payee";
+  if(s.includes('litig')||s.includes('contest')) return "litige";
+  return "attente"; }
+function mergeRows(rows){
+  let added=0, upd=0;
+  for(const r of rows){
+    const key=(r.num||'').toLowerCase();
+    let ex = key ? state.factures.find(f=>(f.num||'').toLowerCase()===key) : null;
+    if(!ex && !key) ex = state.factures.find(f=>f.client.toLowerCase()===r.client.toLowerCase() && (Number(f.montant)||0)===r.montant && f.echeance===r.echeance);
+    if(ex){ const hist=ex.relances||[]; const paidAt=ex.paidAt;
+      Object.assign(ex,r); ex.relances=hist;
+      ex.paidAt = ex.statut==="payee" ? (paidAt||Date.now()) : null; upd++; }
+    else { r.id=uid(); r.relances=[]; r.created=Date.now(); if(r.statut==="payee") r.paidAt=Date.now(); state.factures.push(r); added++; }
+  }
+  save(); render();
+  flash(`${added} ajoutée(s), ${upd} mise(s) à jour`);
+}
+function importPaste(){ const rows=parseRows($('#src').value);
+  if(!rows.length){ alert("Aucune ligne reconnue. Vérifiez le format."); return; } mergeRows(rows); $('#src').value=""; }
+function importFile(ev){ const file=ev.target.files[0]; if(!file) return;
+  const rd=new FileReader(); rd.onload=()=>{ const rows=parseRows(String(rd.result));
+    if(!rows.length){ alert("Aucune ligne reconnue dans le fichier."); return; } mergeRows(rows); };
+  rd.readAsText(file,'utf-8'); ev.target.value=""; }
+function exportCSV(){
+  const head="client,email,num,montant,emission,echeance,statut,relances";
+  const lines=state.factures.map(f=>[f.client,f.email,f.num,f.montant,f.emission||'',f.echeance,
+    f.statut,(f.relances||[]).map(t=>new Date(t).toISOString().slice(0,10)).join('|')]
+    .map(x=>`"${String(x??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob(["﻿"+head+"\n"+lines],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='factures_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+/* ---------- démo ---------- */
+function loadDemo(){
+  const d=n=>new Date(today0()-n*DAY).toISOString().slice(0,10);
+  const rows=[
+    {client:"Dupont SARL",email:"compta@dupont.fr",num:"F-2026-041",montant:1250,echeance:d(16),statut:"attente"},
+    {client:"Martin & Fils",email:"martin@fils.fr",num:"F-2026-038",montant:480,echeance:d(9),statut:"attente"},
+    {client:"Bâti Sud",email:"contact@batisud.fr",num:"F-2026-022",montant:2300,echeance:d(35),statut:"attente"},
+    {client:"Loft Studio",email:"hello@loft.fr",num:"F-2026-044",montant:760,echeance:d(2),statut:"attente"},
+    {client:"Payée SA",email:"ok@payee.fr",num:"F-2026-040",montant:900,echeance:d(20),statut:"payee"},
+  ];
+  mergeRows(rows); toggle('importCard', true);
+}
+
+/* ---------- UI utils ---------- */
+function toggle(id, forceHide){ const el=document.getElementById(id); el.hidden = forceHide?true:!el.hidden; }
+function showOv(id){ document.getElementById(id).classList.add('show'); }
+function closeOv(id){ document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); }));
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.ov.show').forEach(o=>o.classList.remove('show')); });
+$('#tabs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
+  filter=b.dataset.f; document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b)); render(); });
+document.querySelectorAll('thead th[data-s]').forEach(th=>th.addEventListener('click',()=>{
+  const k=th.dataset.s; if(sortKey===k) sortDir*=-1; else { sortKey=k; sortDir = (k==='client'||k==='num')?1:-1; } render(); }));
+
+load(); render();
 </script>
 </body>
 </html>
