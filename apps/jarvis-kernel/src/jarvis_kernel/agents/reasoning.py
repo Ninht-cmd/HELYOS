@@ -55,6 +55,10 @@ class ReasoningAgent(Agent):
             "lis_page": self._t_web_fetch,
             # --- INGÉNIERIE : calcul méca (A1) + génération de pièce 3D (A2) ---
             "calcul_meca": self._t_meca,
+            # --- GÉNÉRATION (A2) : produire de vrais livrables sur le disque ---
+            "genere_code": self._a_genere_code,
+            "plan_ingenierie": self._a_plan_ingenierie,
+            "plan_business": self._a_plan_business,
             # --- ACTION (interne, réversible ; exige A2) : agir ---
             "enregistre_recette": self._a_recette,
             "enregistre_depense": self._a_depense,
@@ -68,7 +72,8 @@ class ReasoningAgent(Agent):
         }
         self._actions = {"enregistre_recette", "enregistre_depense", "ajoute_prospect",
                          "coche_tache", "nouvelle_commande", "nouvelle_tache",
-                         "active_module", "note_memoire", "piece_3d"}
+                         "active_module", "note_memoire", "piece_3d",
+                         "genere_code", "plan_ingenierie", "plan_business"}
 
     # ---- outils (lecture seule ; chaque appel renvoie un texte compact pour le LLM) ----
     def _t_portfolio(self, _arg: str) -> str:
@@ -176,6 +181,36 @@ class ReasoningAgent(Agent):
             return "[refusé : lève l'autonomie à A2 pour que j'agisse]"
         r = generate_part(kind or "box", params)
         return f"pièce {r['kind']} générée : {r['path']} ({r['triangles']} triangles, {r['note']})"
+
+    # ---- génération de livrables (écrit un fichier -> A2) ----
+    def _a_genere_code(self, arg: str) -> str:
+        from ..integrations.codegen import generate_code
+        if not self._gate(ActionType.WRITE_LOCAL, "générer du code"):
+            return "[refusé : lève l'autonomie à A2 pour que j'écrive le fichier]"
+        r = generate_code(arg, self.llm)
+        if not r.get("ok"):
+            return f"[échec génération : {r.get('error')}]"
+        if r["verified"] is True:
+            v = "compile ✅"
+        elif r["verified"] is False:
+            v = f"⚠️ ne compile pas ({r['error']})"
+        else:
+            v = "syntaxe non vérifiée pour ce langage"
+        return f"code {r['language']} généré : {r['path']} ({r['lines']} lignes, {v})"
+
+    def _a_plan_ingenierie(self, arg: str) -> str:
+        from ..integrations.codegen import engineering_plan
+        if not self._gate(ActionType.WRITE_LOCAL, "générer un plan d'ingénierie"):
+            return "[refusé : lève l'autonomie à A2 pour que j'écrive le fichier]"
+        r = engineering_plan(arg, self.llm)
+        return f"plan d'ingénierie écrit : {r['path']} ({r['sections']} sections, {r['chars']} car.)"
+
+    def _a_plan_business(self, arg: str) -> str:
+        from ..integrations.codegen import business_plan
+        if not self._gate(ActionType.WRITE_LOCAL, "générer un plan business"):
+            return "[refusé : lève l'autonomie à A2 pour que j'écrive le fichier]"
+        r = business_plan(arg, self.llm)
+        return f"plan business écrit : {r['path']} ({r['sections']} sections, {r['chars']} car.)"
 
     # ---- outils d'ACTION (interne, réversible ; passent par la gouvernance : A2 requis) ----
     def _gate(self, atype: ActionType, desc: str) -> bool:
@@ -357,6 +392,9 @@ class ReasoningAgent(Agent):
         "lis_page": "lit une page web publique (arg=URL http(s))",
         "calcul_meca": "calcul de méca (arg='engrenage z1=12 z2=36' | 'poutre F=100 L=1')",
         "piece_3d": "génère une pièce 3D STL (arg='engrenage dents=12 h=6' | 'box l=40 h=10')",
+        "genere_code": "écrit un fichier de code qui compile (arg='langage + ce que le code doit faire')",
+        "plan_ingenierie": "rédige un plan d'ingénierie structuré sur le disque (arg='le sujet')",
+        "plan_business": "rédige un plan business chiffré sur le disque (arg='le sujet')",
         "enregistre_recette": "note une recette réelle (arg='business montant')",
         "enregistre_depense": "note une dépense (arg='business montant')",
         "ajoute_prospect": "ajoute un prospect (arg='nom')",

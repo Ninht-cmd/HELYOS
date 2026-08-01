@@ -27,8 +27,8 @@ from .observability.tracing import span
 # Intentions reconnues. La classification renvoie l'une de ces étiquettes.
 INTENTS = ("portefeuille", "commandes", "tresorerie", "prospection", "relance_factures",
            "creer_business", "conseil", "recherche", "marche_financier", "simulation_trading",
-           "nvidia_lab", "open_source_lab", "modules", "raisonnement", "action_dangereuse",
-           "conversation")
+           "nvidia_lab", "open_source_lab", "modules", "generation", "raisonnement",
+           "action_dangereuse", "conversation")
 
 # Filet déterministe (marche sans LLM). Motifs verbe/sujet, pas simples mots-clés.
 # ORDRE VOLONTAIRE : les actions dangereuses sont testées EN PREMIER — « supprime mes
@@ -41,6 +41,15 @@ _RULES: list[tuple[str, str]] = [
     ("action_dangereuse", r"supprim|efface|d[ée]truis|vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te\b|\bvends\b|\binvestis\b|donne.{0,10}droit|permission|privil[eè]g"),
     # commandes (les deux sens) et fournisseurs — AVANT tresorerie (« commande » ≠ « encaisse »)
     ("commandes", r"commande|fournisseur|\bachats?\b|\bventes?\b|\blivrer\b|\blivr[ée]e|carnet"),
+    # GÉNÉRATION de vrais livrables (code qui compile, plan d'ingénierie, plan business).
+    # AVANT « raisonnement » : « génère un script » doit PRODUIRE un fichier, pas juste réfléchir.
+    # Les mots-clés code/plan sont exigés pour ne pas happer « écris une relance » (→ factures).
+    ("generation",
+     r"g[ée]n[èe]re.{0,18}(code|script|programme|fonction|classe|appli|api|site|page web)|"
+     r"[ée]cris?(-?moi)?.{0,18}(un |le |une )?(code|script|programme|fonction|classe|appli|api)|"
+     r"code[- ]?moi|programme[- ]?moi|impl[ée]mente|d[ée]veloppe.{0,18}(fonction|script|code|appli|api|site)|"
+     r"plan d[e']?\s*ing[ée]ni|plan d[e']?\s*affaire|business plan|plan business|"
+     r"[ée]cris?.{0,18}plan (d[e']?\s*ing[ée]ni|business|d[e']?\s*affaire)"),
     # le cerveau : objectif multi-étapes, OU besoin d'aller chercher sur le web
     # (« cherche sur internet X » doit ALLER chercher, pas répondre de mémoire — vécu à l'audit).
     ("raisonnement", r"que dois-je faire|analyse (ma|toute|la) situation|plan d'action|"
@@ -158,6 +167,8 @@ class Jarvis:
                 reply = self._business(message, granted)
             elif intent == "conseil":
                 reply = self._advisory(message, granted)
+            elif intent == "generation":
+                reply = self._generation(message, granted)
             elif intent == "raisonnement":
                 reply = self._reasoning(message, granted)
             elif intent == "nvidia_lab":
@@ -296,6 +307,29 @@ class Jarvis:
         suffix = (f"\n\n(consulté : {', '.join(dict.fromkeys(s['tool'] for s in reads))})"
                   if reads else "")
         return JarvisReply("raisonnement", (head + body + suffix).strip(), True, "allow")
+
+    def _generation(self, message: str, granted: AutonomyLevel) -> JarvisReply:
+        """Produit un VRAI livrable (code qui compile, plan d'ingénierie, plan business)
+        de façon déterministe — pas au gré du choix d'outil du LLM. Écriture = A2."""
+        from .agents.reasoning import ReasoningAgent
+
+        agent = ReasoningAgent(self.ctx, llm=self.llm)
+        agent._granted = granted
+        low = message.lower()
+        if re.search(r"business|plan d[e']?\s*affaire|commercial|go.?to.?market|rentab|mon[ée]tis", low):
+            out, quoi = agent._a_plan_business(message), "plan business"
+        elif re.search(r"ing[ée]ni|conception|m[ée]canique|architecture technique|banc.{0,6}test|dimensionn", low):
+            out, quoi = agent._a_plan_ingenierie(message), "plan d'ingénierie"
+        else:
+            out, quoi = agent._a_genere_code(message), "code"
+        refused = out.startswith("[")
+        if refused:
+            head = f"⛔ NON fait ({quoi}) : " + out.strip("[]")
+            return JarvisReply("generation", head, True, "require_validation")
+        return JarvisReply(
+            "generation",
+            f"✅ Fait — {out}\n\nOuvre le fichier pour le récupérer ; il est écrit sur ton disque.",
+            True, "allow")
 
     def _advisory(self, message: str, granted: AutonomyLevel) -> JarvisReply:
         from .agents.advisory import AdvisoryBoard

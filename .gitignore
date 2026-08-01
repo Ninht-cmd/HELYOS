@@ -31,3 +31,6 @@ Thumbs.db
 .coverage
 .claude/
 pieces_3d/
+
+# livrables générés par le cerveau (code, plans) — artefacts, pas source
+generated/
