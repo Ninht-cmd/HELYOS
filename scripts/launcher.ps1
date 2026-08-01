@@ -12,6 +12,20 @@ function Test-Kernel {
     try { (Invoke-WebRequest -Uri "http://127.0.0.1:8080/health" -TimeoutSec 2 -UseBasicParsing).StatusCode -eq 200 }
     catch { $false }
 }
+function Test-Ollama {
+    try { (Invoke-WebRequest -Uri "http://127.0.0.1:11434/api/tags" -TimeoutSec 2 -UseBasicParsing).StatusCode -eq 200 }
+    catch { $false }
+}
+
+# 0) LE CERVEAU : sans Ollama, HELYOS ne raisonne pas et ne génère pas (mode dégradé
+#    muet). On le démarre AVANT le noyau — plus jamais de cerveau mort sans le dire.
+if (-not (Test-Ollama)) {
+    $ollama = (Get-Command ollama -ErrorAction SilentlyContinue).Source
+    if ($ollama) {
+        Start-Process -WindowStyle Hidden -FilePath $ollama -ArgumentList "serve"
+        for ($i = 0; $i -lt 24 -and -not (Test-Ollama); $i++) { Start-Sleep -Milliseconds 500 }
+    }
+}
 
 # 1) noyau : démarrer en arrière-plan (sans console) s'il ne répond pas déjà
 if (-not (Test-Kernel)) {

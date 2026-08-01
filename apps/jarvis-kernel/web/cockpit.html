@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>HELYOS — Cockpit relié</title>
+<title>HELYOS — Cockpit autonome</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
 <meta name="theme-color" content="#0e1726">
 <style>
-  /* Cockpit HELYOS × STARK × JARVIS — la maquette « Codex », mais RÉELLEMENT reliée.
-     Chaque état vient d'une sonde réelle (HELYOS se sonde + sonde STARK :4242 et
-     Ollama :11434 côté serveur). Un service éteint est 'offline', jamais 'standby' feint. */
+  /* Cockpit HELYOS — ACTION d'abord. HELYOS parle en premier (le Pouls, réel),
+     tu agis dedans (console reliée à /jarvis), il te propose les prochains pas.
+     Tout état vient d'une sonde réelle : un cerveau éteint est dit dégradé, jamais feint. */
   :root{
     --bg:#eef1f7; --card:#fff; --ink:#141827; --muted:#5f6478; --faint:#9aa0b4; --line:#e6e9f2;
     --navy:#141827; --navy-2:#1c2133; --navy-ink:#aab0c6;
@@ -24,79 +24,76 @@
     -webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
   .shell{display:grid;grid-template-columns:212px 1fr;min-height:100vh;min-height:100dvh}
-
   .side{background:var(--navy);color:var(--navy-ink);padding:18px 12px;display:flex;flex-direction:column;gap:2px}
   .side .logo{display:flex;align-items:center;gap:9px;padding:0 8px 18px}
-  .side .logo .lg{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;
-    color:#fff;font-weight:800;font-size:16px}
+  .side .logo .lg{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px}
   .side .logo b{color:#fff;font-size:15px;font-weight:800;display:block;line-height:1.1}
   .side .logo span{font-size:10.5px;color:#6a708a}
   .side a.nav{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:13px;transition:.15s}
   .side a.nav:hover{background:rgba(255,255,255,.05);color:#fff}
   .side a.nav.on{background:var(--navy-2);color:#fff;font-weight:600}
-  .side a.nav .i{width:20px;height:20px;border-radius:6px;background:rgba(255,255,255,.07);display:grid;
-    place-items:center;font-size:11px;flex:none}
+  .side a.nav .i{width:20px;height:20px;border-radius:6px;background:rgba(255,255,255,.07);display:grid;place-items:center;font-size:11px;flex:none}
   .side .br{margin-top:auto;background:var(--navy-2);border-radius:12px;padding:11px 12px;font-size:11px}
   .side .br .l{color:#6a708a}
   .side .br .v{color:var(--mint);font-weight:700;font-size:13px;margin-top:2px}
 
-  .wrap{display:grid;grid-template-columns:1fr 300px;gap:16px;padding:20px 22px;align-items:start;max-width:1560px}
-  .col{display:flex;flex-direction:column;gap:16px;min-width:0}
-  .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:18px 20px}
+  .wrap{display:grid;grid-template-columns:1fr 320px;gap:16px;padding:18px 20px;align-items:start;max-width:1560px}
+  .col{display:flex;flex-direction:column;gap:14px;min-width:0}
+  .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px 18px}
   .eyebrow{font-size:10.5px;font-weight:700;letter-spacing:1px;color:var(--vio);text-transform:uppercase}
-  .card h2{font-size:17px;font-weight:750;margin-top:3px}
-  .card .desc{font-size:12.5px;color:var(--muted);margin-top:3px}
-  .badge{font-size:10px;font-weight:700;border-radius:99px;padding:3px 10px;letter-spacing:.4px}
-  .b-live{background:var(--mint-soft);color:#0a6e50} .b-partial{background:var(--amber-soft);color:#8a5a0d}
-  .b-off{background:var(--coral-soft);color:#a11d1d}
-  .row-h{display:flex;align-items:flex-start;gap:10px}
-  .row-h .sp{flex:1}
-  .iconbtn{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:#fff;cursor:pointer;
-    font-size:15px;color:var(--muted);transition:.15s}
-  .iconbtn:hover{color:var(--vio);border-color:var(--vio)}
+  .card h2{font-size:16px;font-weight:750;margin-top:3px}
+  .rowh{display:flex;align-items:center;gap:10px}
+  .rowh .sp{flex:1}
+  .pill{font-size:10.5px;font-weight:700;border-radius:99px;padding:3px 10px;letter-spacing:.3px;white-space:nowrap}
+  .p-live{background:var(--mint-soft);color:#0a6e50} .p-warn{background:var(--amber-soft);color:#8a5a0d}
+  .p-off{background:var(--coral-soft);color:#a11d1d}
+  .banner{display:none;background:var(--coral-soft);color:#8a1414;border-radius:14px;padding:12px 14px;font-size:13px;line-height:1.5}
+  .banner code{background:#fff;border-radius:6px;padding:1px 6px;font-size:12px}
 
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-  .kpi{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:15px 16px}
-  .kpi .l{font-size:11px;color:var(--muted)}
-  .kpi .v{font-size:23px;font-weight:800;margin-top:5px;letter-spacing:-.5px}
-  .kpi .s{font-size:10.5px;color:var(--faint);margin-top:4px}
-  .kpi .bar{height:4px;border-radius:99px;background:var(--line);margin-top:9px;overflow:hidden}
-  .kpi .bar i{display:block;height:100%;border-radius:99px;background:var(--grad);width:0;transition:width .6s}
+  /* HELYOS parle en premier */
+  .speak{background:linear-gradient(180deg,#141827,#1c2133);color:#e9ecf6;border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow)}
+  .speak .eyebrow{color:#8fa0ff}
+  .speak h2{color:#fff;font-size:17px;margin:2px 0 10px}
+  .brief-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:13px;line-height:1.5}
+  .brief-item:last-child{border-bottom:0}
+  .bi-ic{width:22px;height:22px;border-radius:7px;background:rgba(255,255,255,.08);display:grid;place-items:center;font-size:12px;flex:none;margin-top:1px}
+  .bi-ic.u{background:var(--coral);color:#fff}
+  .brief-item b{color:#fff}
+  .speak .foot{font-size:11.5px;color:#7f87a6;margin-top:10px}
 
-  .duo{display:grid;grid-template-columns:1.55fr 1fr;gap:16px}
-  .chart{width:100%;height:210px;display:block}
-  .cnote{font-size:11px;color:var(--faint);text-align:center;padding:4px 0 0}
-  .legend{display:flex;gap:14px;font-size:11.5px;color:var(--muted);margin-top:8px}
-  .legend span{display:inline-flex;align-items:center;gap:5px} .legend i{width:9px;height:9px;border-radius:50%}
+  /* console */
+  .conv{max-height:340px;overflow:auto;display:flex;flex-direction:column;gap:9px;padding:2px 0 4px}
+  .msg{max-width:88%;padding:10px 13px;border-radius:13px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+  .msg.me{align-self:flex-end;background:var(--vio);color:#fff;border-bottom-right-radius:5px}
+  .msg.hs{align-self:flex-start;background:var(--bg);color:var(--ink);border-bottom-left-radius:5px}
+  .msg.hs .tag{font-size:10px;font-weight:700;color:var(--vio);letter-spacing:.4px;text-transform:uppercase;display:block;margin-bottom:3px}
+  .msg.think{color:var(--faint);font-style:italic}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 8px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 12px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s}
+  .chip:hover{border-color:var(--vio);color:var(--vio)}
+  .bar{display:flex;gap:8px;align-items:center;margin-top:6px}
+  .bar input{flex:1;border:1px solid var(--line);border-radius:12px;padding:11px 13px;font:inherit;font-size:13.5px;color:var(--ink);background:#fff}
+  .bar input:focus{outline:none;border-color:var(--vio)}
+  .lvl{border:1px solid var(--line);border-radius:10px;padding:9px;font:inherit;font-size:12px;background:#fff;color:var(--muted)}
+  .send{background:var(--grad);color:#fff;border:0;border-radius:12px;padding:11px 16px;font:600 13.5px inherit;cursor:pointer}
+  .send:disabled{opacity:.5;cursor:default}
+  .hint{font-size:11.5px;color:var(--faint);margin-top:7px;line-height:1.5}
 
-  .gauge-wrap{display:flex;flex-direction:column;align-items:center;padding:6px 0}
-  .gauge-v{font-size:34px;font-weight:800;margin-top:-42px}
-  .gauge-s{font-size:11px;color:var(--muted);margin-top:6px;text-align:center;line-height:1.5}
-
-  .topo{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center}
-  .node{border:1px solid var(--line);border-radius:14px;padding:14px;position:relative}
-  .node .t{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--faint);text-transform:uppercase}
-  .node .st{font-size:18px;font-weight:800;margin-top:4px}
-  .node .d{font-size:11px;color:var(--muted);margin-top:3px}
-  .node.on{border-color:#bfe9d8;background:linear-gradient(180deg,#fff,#f4fdf9)}
-  .node.off{border-color:#f3cccc;background:linear-gradient(180deg,#fff,#fff6f6)}
-  .node .dot{position:absolute;top:12px;right:12px;width:9px;height:9px;border-radius:50%}
-  .dot.on{background:var(--mint);box-shadow:0 0 0 4px var(--mint-soft)}
-  .dot.off{background:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
-  .topo-note{font-size:11.5px;color:var(--muted);background:var(--bg);border-radius:10px;padding:9px 12px;margin-top:12px}
-
-  .rail .card{padding:15px 16px}
+  /* rail */
   .rail h3{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--faint);text-transform:uppercase}
-  .rail .big{font-size:22px;font-weight:800;margin:5px 0}
-  .act{display:block;border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:12.5px;
-    font-weight:600;margin-top:9px;transition:.15s;cursor:pointer;background:#fff}
-  .act:hover{border-color:var(--vio);color:var(--vio)}
-  .sig{font-size:12px;color:var(--muted);padding:7px 0;border-bottom:1px solid var(--line);line-height:1.4}
-  .sig:last-child{border-bottom:0}
+  .prop{display:flex;gap:9px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:10px 11px;margin-top:9px;font-size:12.5px;line-height:1.4;cursor:pointer;transition:.15s;background:#fff}
+  .prop:hover{border-color:var(--vio)}
+  .prop.u{border-color:#f3cccc;background:linear-gradient(180deg,#fff,#fff6f6)}
+  .prop .pic{width:24px;height:24px;border-radius:8px;background:var(--vio-soft);color:var(--vio);display:grid;place-items:center;font-size:12px;flex:none}
+  .prop.u .pic{background:var(--coral-soft);color:var(--coral)}
+  .stat{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .stat:last-child{border-bottom:0}
+  .stat b{font-size:15px;font-weight:800}
+  .muted{color:var(--muted)}
 
-  @media(max-width:1200px){.wrap{grid-template-columns:1fr}.duo{grid-template-columns:1fr}}
+  @media(max-width:1200px){.wrap{grid-template-columns:1fr}}
   @media(max-width:760px){.shell{grid-template-columns:1fr}.side{flex-direction:row;overflow-x:auto;gap:5px}
-    .side .logo,.side .br{display:none}.topo{grid-template-columns:1fr}.wrap{padding:14px}}
+    .side .logo,.side .br{display:none}.wrap{padding:14px}}
 </style>
 </head>
 <body>
@@ -105,85 +102,73 @@
     <div class="logo"><span class="lg">H</span><span><b>HELYOS</b><span>Business OS</span></span></div>
     <a class="nav on" href="./cockpit.html"><span class="i">◎</span> Cockpit</a>
     <a class="nav" href="./board.html"><span class="i">▤</span> Tableau de bord</a>
-    <a class="nav" href="./index.html"><span class="i">✦</span> Assistant IA</a>
+    <a class="nav" href="./index.html"><span class="i">✦</span> Assistant immersif</a>
     <a class="nav" href="/docs"><span class="i">⚙</span> API</a>
     <a class="nav" href="https://github.com/Ninht-cmd/HELYOS"><span class="i">⌥</span> Open source</a>
-    <div class="br"><div class="l">Desktop bridge</div><div class="v" id="br-side">…</div></div>
+    <div class="br"><div class="l">Cerveau local</div><div class="v" id="br-side">…</div></div>
   </nav>
 
   <div class="wrap">
     <div class="col">
-      <section class="card">
-        <div class="row-h">
-          <div>
-            <div class="eyebrow">HELYOS × STARK HOLO × JARVIS</div>
-            <h2 id="hero">Bonjour Emeric, ton cockpit se connecte…</h2>
-            <p class="desc" id="hero-sub">Lecture du système local, du bridge HELYOS et des agents STARK.</p>
-          </div>
+      <div class="banner" id="banner"></div>
+
+      <!-- HELYOS PARLE EN PREMIER -->
+      <section class="speak">
+        <div class="rowh">
+          <div><div class="eyebrow">HELYOS — ce que j'observe</div>
+            <h2 id="speak-h">Je fais le point sur ton empire…</h2></div>
           <span class="sp"></span>
-          <a class="iconbtn" href="./index.html" title="Ouvrir l'assistant">↗</a>
-          <button class="iconbtn" onclick="refresh()" title="Rafraîchir">⟳</button>
+          <button class="chip" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:#cdd3ea" onclick="loadBriefing()">↻ Actualiser</button>
+          <button class="chip" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:#cdd3ea" onclick="speakOut()" id="voiceBtn">🔊 Écouter</button>
         </div>
+        <div id="brief"><div class="brief-item"><span class="bi-ic">…</span> Lecture du Pouls…</div></div>
+        <div class="foot" id="brief-foot"></div>
       </section>
 
-      <div class="kpis">
-        <div class="kpi"><div class="l">Bridge HELYOS</div><div class="v" id="k-bridge">—</div>
-          <div class="s" id="k-bridge-s">sonde locale</div><div class="bar"><i id="bar-bridge"></i></div></div>
-        <div class="kpi"><div class="l">STARK / JARVIS</div><div class="v" id="k-stark">—</div>
-          <div class="s" id="k-stark-s">pont :4242</div><div class="bar"><i id="bar-stark"></i></div></div>
-        <div class="kpi"><div class="l">Moteur LLM</div><div class="v" id="k-engine">—</div>
-          <div class="s" id="k-engine-s">Ollama :11434</div><div class="bar"><i id="bar-engine"></i></div></div>
-        <div class="kpi"><div class="l">Pipeline (90j)</div><div class="v" id="k-pipe">—</div>
-          <div class="s" id="k-pipe-s">prospects réels</div><div class="bar"><i id="bar-pipe"></i></div></div>
-        <div class="kpi"><div class="l">Autopilot</div><div class="v" id="k-auto">—</div>
-          <div class="s" id="k-auto-s">autorisé vs gouverné</div><div class="bar"><i id="bar-auto"></i></div></div>
-      </div>
-
-      <div class="duo">
-        <section class="card">
-          <div class="row-h"><div><div class="eyebrow">Business telemetry</div>
-            <h2>Revenus (caisse réelle)</h2></div><span class="sp"></span>
-            <span class="badge" id="tel-badge">…</span></div>
-          <svg class="chart" id="chart" viewBox="0 0 600 210" preserveAspectRatio="none"></svg>
-          <div class="cnote" id="cnote"></div>
-        </section>
-        <section class="card">
-          <div class="row-h"><div><div class="eyebrow">System score</div>
-            <h2>Readiness globale</h2></div><span class="sp"></span>
-            <span class="badge" id="score-badge">…</span></div>
-          <div class="gauge-wrap">
-            <svg width="200" height="118" viewBox="0 0 200 118" id="gauge"></svg>
-            <div class="gauge-v" id="gauge-v">—%</div>
-            <div class="gauge-s" id="gauge-s"></div>
-          </div>
-        </section>
-      </div>
-
+      <!-- CONSOLE : agir sans changer de page -->
       <section class="card">
-        <div class="row-h"><div><div class="eyebrow">Live topology</div>
-          <h2>HELYOS · STARK · JARVIS</h2></div><span class="sp"></span>
-          <span class="badge" id="topo-badge">…</span></div>
-        <div class="topo" style="margin-top:14px" id="topo"></div>
-        <div class="topo-note" id="topo-note">Lecture du bridge en cours.</div>
+        <div class="rowh"><div><div class="eyebrow">Console</div>
+          <h2>Parle à HELYOS — il agit ici même</h2></div><span class="sp"></span>
+          <span class="pill p-live" id="eng-pill">…</span></div>
+        <div class="chips">
+          <span class="chip" onclick="quick('quelle est ma priorité absolue maintenant ? sois concret')">🎯 Ma priorité maintenant</span>
+          <span class="chip" onclick="quick('où en sont mes business ?')">📊 Mes business</span>
+          <span class="chip" onclick="ask('génère un plan business pour ')">💼 Plan business</span>
+          <span class="chip" onclick="ask('génère un script python qui ')">⌨ Génère du code</span>
+          <span class="chip" onclick="ask('fais un plan d\'ingénierie pour ')">🔧 Plan d'ingénierie</span>
+        </div>
+        <div class="conv" id="conv"></div>
+        <div class="bar">
+          <input id="q" placeholder="Demande-lui n'importe quoi — génère, analyse, relance…" onkeydown="if(event.key==='Enter')go()">
+          <select class="lvl" id="lvl" title="Niveau d'autonomie">
+            <option value="A1">A1 · observer</option>
+            <option value="A2">A2 · agir</option>
+          </select>
+          <button class="send" id="send" onclick="go()">Envoyer</button>
+        </div>
+        <div class="hint" id="hint">A1 = HELYOS lit et propose. A2 = il agit (écrit un fichier, note une écriture…). Il ne dépense/n'envoie jamais tout seul.</div>
       </section>
     </div>
 
+    <!-- RAIL : propositions réelles + état honnête -->
     <div class="col rail">
       <section class="card">
-        <h3>HELYOS Bridge</h3>
-        <div class="big" id="br-status">…</div>
-        <div class="sig" id="br-detail">sonde du noyau local</div>
+        <h3>Ce que HELYOS propose</h3>
+        <div id="props"><div class="prop"><span class="pic">…</span> J'analyse ton état…</div></div>
       </section>
       <section class="card">
-        <h3>Actions</h3>
-        <a class="act" href="./board.html">▤ Tableau de bord business</a>
-        <a class="act" href="./index.html">✦ Parler à HELYOS</a>
-        <a class="act" href="/cockpit/topology" target="_blank">◎ Topologie (JSON)</a>
-        <a class="act" href="/health" target="_blank">♥ HELYOS /health</a>
+        <h3>État réel</h3>
+        <div class="stat"><span class="muted">Cerveau</span><b id="s-eng">—</b></div>
+        <div class="stat"><span class="muted">Business pilotés</span><b id="s-biz">—</b></div>
+        <div class="stat"><span class="muted">Pipeline prospects</span><b id="s-pipe">—</b></div>
+        <div class="stat"><span class="muted">Caisse encaissée</span><b id="s-cash">—</b></div>
+        <div class="hint" id="s-note" style="margin-top:8px"></div>
       </section>
       <section class="card">
-        <h3>Signaux récents</h3>
-        <div id="signals"><div class="sig">Initialisation…</div></div>
+        <h3>Accès</h3>
+        <a class="prop" href="./board.html"><span class="pic">▤</span> Tableau de bord business</a>
+        <a class="prop" href="./index.html"><span class="pic">✦</span> Mode immersif (voix)</a>
+        <a class="prop" href="/docs" target="_blank"><span class="pic">⚙</span> API / endpoints</a>
       </section>
     </div>
   </div>
@@ -193,129 +178,129 @@
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const api = async u => { const r = await fetch(u); if(!r.ok) throw new Error(u+' '+r.status); return r.json(); };
+const post = async (u,b) => { const r = await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}); if(!r.ok) throw new Error(u+' '+r.status); return r.json(); };
 const fr = n => Number(n||0).toLocaleString('fr-FR');
-const rel = ts => { const s=Math.max(0,Date.now()/1000-ts); return s<60?Math.round(s)+' s':s<3600?Math.round(s/60)+' min':Math.round(s/3600)+' h'; };
-const AUDIT_FLASH = 490;   // prix réel de l'Audit Flash (Plan Cash) pour le potentiel pipeline
+let lastBrief = "";
 
-function setBar(id,pct){ const el=$(id); if(el) el.style.width=Math.max(0,Math.min(100,pct))+'%'; }
-
-async function loadTopology(){
-  const t = await api('/cockpit/topology');
-  // KPIs bridge / stark / engine
-  $('#k-bridge').textContent = t.helyos.status==='online' ? 'RELIÉ' : 'OFFLINE';
-  $('#k-bridge-s').textContent = `v${t.helyos.version} · ${t.helyos.agents} agents`;
-  setBar('#bar-bridge', t.helyos.status==='online'?100:0);
-  $('#k-stark').textContent = t.stark.status==='online' ? 'ONLINE' : 'OFFLINE';
-  $('#k-stark-s').textContent = t.stark.status==='online' ? `lien HELYOS: ${esc(t.stark.helyos_link)}` : 'STARK non lancé';
-  setBar('#bar-stark', t.stark.status==='online'?100:0);
-  $('#k-engine').textContent = t.engines.status==='online' ? `${t.engines.models} modèle(s)` : 'OFFLINE';
-  $('#k-engine-s').textContent = `backend: ${esc(t.engines.backend)}`;
-  setBar('#bar-engine', t.engines.status==='online'?100:0);
-  $('#k-auto').textContent = t.autopilot.pct + '%';
-  $('#k-auto-s').textContent = `${t.autopilot.ready} auto · ${t.autopilot.blocked} gouvernés`;
-  setBar('#bar-auto', t.autopilot.pct);
-
-  // gauge readiness
-  drawGauge(t.readiness.score);
-  const p = t.readiness.parts;
-  $('#gauge-v').textContent = t.readiness.score + '%';
-  $('#gauge-s').textContent = `HELYOS ${p.helyos}% · STARK ${p.stark}% · moteur ${p.engines}% · modules ${p.modules}%`;
-  $('#score-badge').className = 'badge ' + (t.readiness.score>=75?'b-live':t.readiness.score>=40?'b-partial':'b-off');
-  $('#score-badge').textContent = t.readiness.score>=75?'PRÊT':t.readiness.score>=40?'PARTIEL':'DÉGRADÉ';
-
-  // topology nodes
-  const node = (t2,st,detail,on)=>`<div class="node ${on?'on':'off'}"><span class="dot ${on?'on':'off'}"></span>
-    <div class="t">${t2}</div><div class="st">${st}</div><div class="d">${esc(detail)}</div></div>`;
-  $('#topo').innerHTML =
-    node('HELYOS', t.helyos.status==='online'?'RELIÉ':'OFFLINE', 'cerveau gouverné · local', t.helyos.status==='online') +
-    node('STARK HOLO', t.stark.status==='online'?'ONLINE':'OFFLINE', 'cockpit desktop :4242', t.stark.status==='online') +
-    node('JARVIS', t.stark.status==='online'?'RELIÉ':'EN ATTENTE', 'pont cognition gouvernée', t.stark.status==='online');
-  const linked = t.stark.status==='online';
-  $('#topo-badge').className='badge '+(linked?'b-live':'b-partial');
-  $('#topo-badge').textContent = linked?'RELIÉ':'PARTIEL';
-  $('#topo-note').textContent = linked
-    ? 'HELYOS (cerveau) ⇄ STARK HOLO (cockpit) ⇄ JARVIS (pont gouverné) — chaîne complète, toute action gouvernée A0–A5.'
-    : 'HELYOS est relié. STARK n\'est pas lancé (npm run dev dans le dépôt STARK) — JARVIS attend le corps. Aucun état inventé.';
-
-  // hero + sidebar bridge
-  $('#hero').textContent = linked ? 'Bonjour Emeric, ton cockpit est relié.' : 'Bonjour Emeric, HELYOS est en ligne.';
-  $('#hero-sub').textContent = linked
-    ? 'HELYOS ⇄ STARK ⇄ JARVIS actifs — cognition gouvernée, moteur ' + (t.engines.status==='online'?'local prêt.':'à démarrer.')
-    : 'HELYOS répond. Démarre STARK pour relier le cockpit desktop et JARVIS.';
-  $('#br-side').textContent = linked ? 'RELIÉ' : 'HELYOS SEUL';
-  $('#br-status').textContent = t.helyos.status==='online' ? 'RELIÉ' : 'OFFLINE';
-  $('#br-detail').textContent = `${t.helyos.decisions} décision(s) gouvernée(s) · ${t.helyos.agents} agents`;
-  return t;
+/* ---------- HELYOS parle en premier (le Pouls, réel) ---------- */
+const ICON = {deadline:'⏰', task:'📌', connector:'🔌', treasury:'💶', order:'📦', market:'📈', prospection:'🎯'};
+function linkFor(text){
+  const t = text.toLowerCase();
+  if(t.includes('gumroad')) return 'https://gumroad.com';
+  if(t.includes('urssaf')||t.includes('micro-entrepreneur')||t.includes('autoentrepreneur')) return 'https://www.autoentrepreneur.urssaf.fr';
+  if(t.includes('linkedin')) return 'https://www.linkedin.com';
+  return null;
 }
-
-async function loadBusiness(){
-  const g = await api('/ledger');
-  const live = g.par_business.length > 0;
-  $('#tel-badge').className = 'badge ' + (live?'b-live':'b-partial');
-  $('#tel-badge').textContent = live ? 'LIVE' : 'EN ATTENTE';
-  // courbe cumulée des recettes (30 j) depuis le livre de caisse
-  let entries = [];
-  for (const s of g.par_business){
-    try { const d = await api('/ledger?business='+encodeURIComponent(s.business));
-          entries = entries.concat(d.dernieres_ecritures||[]); } catch(_){}
+async function loadBriefing(){
+  try{
+    const b = await api('/pulse/briefing');
+    lastBrief = b.text || "";
+    const items = b.items || [];
+    $('#speak-h').textContent = items.length
+      ? "Voici ce que je vois — et ce que je te propose de traiter."
+      : "Tout est calme : rien d'urgent à te signaler.";
+    $('#brief').innerHTML = items.length ? items.map(it=>{
+      const url = linkFor(it.text);
+      const inner = esc(it.text) + (url?` <a href="${url}" target="_blank" style="color:#8fa0ff;font-weight:700">→ ouvrir</a>`:'');
+      return `<div class="brief-item"><span class="bi-ic ${it.urgent?'u':''}">${ICON[it.kind]||'•'}</span><div>${inner}</div></div>`;
+    }).join('') : '<div class="brief-item"><span class="bi-ic">✓</span> Aucune alerte. HELYOS continue d\'observer en fond.</div>';
+    $('#brief-foot').textContent = "Observé automatiquement par le Pouls — HELYOS parle en premier, sans que tu demandes.";
+    buildProps(items);
+  }catch(e){
+    $('#speak-h').textContent = "Je n'arrive pas à lire mon Pouls — le noyau répond-il ?";
+    $('#brief').innerHTML = '<div class="brief-item"><span class="bi-ic u">!</span> Noyau injoignable.</div>';
   }
-  drawChart(entries);
-  $('#cnote').textContent = live
-    ? `${fr(g.recettes_eur)} € encaissés · solde ${fr(g.solde_eur)} € — issu du livre de caisse`
-    : 'La courbe naîtra avec la première écriture réelle. Jamais décorative.';
+}
+function speakOut(){
+  if(!lastBrief || !window.speechSynthesis) return;
+  const u = new SpeechSynthesisUtterance(lastBrief.replace(/[•⚠]/g,' '));
+  u.lang='fr-FR'; u.rate=1.04; speechSynthesis.cancel(); speechSynthesis.speak(u);
 }
 
-async function loadPipeline(){
-  try {
-    const p = await api('/prospection');
-    const n = p.stats.total, open = n - (p.stats.par_statut?.client||0);
-    $('#k-pipe').textContent = n;
-    $('#k-pipe-s').textContent = n ? `potentiel ${fr(open*AUDIT_FLASH)} € (${open}×490 €)` : 'aucun prospect — ajoute-en 1';
-    setBar('#bar-pipe', Math.min(100, n*5));
-  } catch(_){ $('#k-pipe').textContent='0'; }
+/* ---------- propositions actionnables, dérivées de l'état réel ---------- */
+function buildProps(items){
+  const props = [];
+  for(const it of items){
+    const url = linkFor(it.text);
+    if(url){ props.push({u:it.urgent, ic:ICON[it.kind]||'→', html:esc(it.text.split(':').slice(0,1)[0]||it.text).slice(0,70), href:url}); continue; }
+    if(it.kind==='connector'){ props.push({u:false, ic:'🔌', html:'Brancher : '+esc(it.text.replace(/.*débranchés?\s*:\s*/i,'')), ask:'connecte '+it.text.replace(/.*:\s*/,'').split(',')[0].trim()}); continue; }
+    if(it.kind==='task'){ const biz=(it.text.split('—')[0]||'').replace(/.*?[»:]\s*/,'').trim(); props.push({u:false, ic:'📌', html:esc((it.text.split('prochaine :')[1]||it.text).trim()).slice(0,72), ask:'où en est '+(biz||'ce business')+' ?'}); continue; }
+  }
+  props.push({u:false, ic:'🎯', html:'Demander à HELYOS ma priorité absolue', ask:'quelle est ma priorité absolue maintenant ? sois concret'});
+  $('#props').innerHTML = props.slice(0,7).map((p,i)=>
+    `<div class="prop ${p.u?'u':''}" data-i="${i}"><span class="pic">${p.ic}</span><div>${p.html}</div></div>`).join('');
+  $('#props').querySelectorAll('.prop').forEach((el,i)=>{
+    const p = props[i];
+    el.onclick = () => { if(p.href) window.open(p.href,'_blank'); else if(p.ask) quick(p.ask); };
+  });
 }
 
-async function loadSignals(){
-  try {
-    const ev = await api('/events?limit=5');
-    $('#signals').innerHTML = ev.length ? ev.slice().reverse().map(e=>
-      `<div class="sig">${esc(e.name)} · il y a ${rel(e.ts)}</div>`).join('')
-      : '<div class="sig">aucun événement encore</div>';
-  } catch(_){}
+/* ---------- console reliée à /jarvis ---------- */
+function bubble(cls, tag, text){
+  const d = document.createElement('div');
+  d.className = 'msg '+cls;
+  d.innerHTML = (tag?`<span class="tag">${esc(tag)}</span>`:'') + esc(text);
+  $('#conv').appendChild(d); $('#conv').scrollTop = $('#conv').scrollHeight;
+  return d;
+}
+function ask(prefix){ $('#q').value = prefix; $('#q').focus(); }
+function quick(msg){ $('#q').value = msg; go(); }
+async function go(){
+  const q = $('#q').value.trim(); if(!q) return;
+  const lvl = $('#lvl').value;
+  $('#q').value=''; $('#send').disabled=true;
+  bubble('me','', q);
+  const think = bubble('hs think','', 'HELYOS réfléchit…');
+  try{
+    const r = await post('/jarvis', {message:q, granted_level:lvl});
+    think.remove();
+    const b = bubble('hs', r.intent||'helyos', r.text||'(réponse vide)');
+    if((r.text||'').includes('lève l\'autonomie') || (r.text||'').startsWith('⛔')){
+      const h = bubble('hs think','', '↳ Astuce : bascule le niveau sur « A2 · agir » puis renvoie.');
+    }
+  }catch(e){
+    think.remove();
+    bubble('hs think','', 'Le cerveau ne répond pas — vérifie le noyau (et Ollama pour raisonner).');
+  }finally{ $('#send').disabled=false; $('#q').focus(); }
 }
 
-function drawGauge(score){
-  const svg=$('#gauge'), cx=100, cy=100, R=82, W=16;
-  const a0=Math.PI, a1=Math.PI*(1 - score/100);
-  const pt=a=>`${(cx+R*Math.cos(a)).toFixed(1)},${(cy-R*Math.sin(a)).toFixed(1)}`;
-  const arc=(from,to,col)=>`<path d="M ${pt(from)} A ${R} ${R} 0 0 1 ${pt(to)}" fill="none"
-    stroke="${col}" stroke-width="${W}" stroke-linecap="round"/>`;
-  svg.innerHTML = arc(a0, 0, '#e6e9f2') + (score>0?arc(a0, a1, 'url(#gg)'):'') +
-    `<defs><linearGradient id="gg"><stop offset="0" stop-color="#5b6cff"/><stop offset="1" stop-color="#22c1dc"/></linearGradient></defs>`;
+/* ---------- état réel + santé du cerveau (jamais feint) ---------- */
+async function loadHealth(){
+  try{
+    const t = await api('/cockpit/topology');
+    const online = t.engines.status==='online';
+    $('#eng-pill').className = 'pill '+(online?'p-live':'p-off');
+    $('#eng-pill').textContent = online ? `cerveau prêt · ${t.engines.models} modèle(s)` : 'cerveau dégradé';
+    $('#s-eng').textContent = online ? 'prêt' : 'dégradé';
+    $('#br-side').textContent = online ? 'PRÊT' : 'DÉGRADÉ';
+    $('#br-side').style.color = online ? '' : '#ff8f8f';
+    const bn = $('#banner');
+    if(!online){
+      bn.style.display='block';
+      bn.innerHTML = "⚠️ <b>Cerveau en mode dégradé</b> : Ollama n'est pas lancé, HELYOS ne peut que router (pas raisonner ni générer). "+
+        "Ouvre un terminal et tape <code>ollama serve</code> (ou lance l'app Ollama), puis <b>Actualiser</b>.";
+    } else bn.style.display='none';
+  }catch(e){
+    $('#banner').style.display='block';
+    $('#banner').innerHTML = "⚠️ <b>Noyau injoignable</b> sur le port 8080. Relance le lanceur HELYOS.";
+  }
+}
+async function loadState(){
+  try{ const p = await api('/prospection'); $('#s-pipe').textContent = p.stats.total; }catch(_){ $('#s-pipe').textContent='—'; }
+  try{ const g = await api('/ledger');
+    $('#s-cash').textContent = fr(g.recettes_eur)+' €';
+    $('#s-biz').textContent = g.par_business.length || '—';
+    $('#s-note').textContent = g.par_business.length ? '' : 'Caisse à 0 € — honnête. Le 1er encaissement fera vivre les chiffres.';
+  }catch(_){}
+  // nombre de business via le portefeuille (fiable)
+  try{ const r = await post('/jarvis',{message:'portefeuille',granted_level:'A1'});
+    const m = (r.text||'').match(/gère\s+(\d+)\s+business/i); if(m) $('#s-biz').textContent = m[1];
+  }catch(_){}
 }
 
-function drawChart(entries){
-  const svg=$('#chart'), W=600,H=210,P=16, days=30, now=Date.now()/1000, DAY=86400;
-  const daily=new Array(days).fill(0);
-  for(const e of entries){ if(e.kind!=='recette')continue;
-    const i=Math.floor((now-e.ts)/DAY); if(i>=0&&i<days) daily[days-1-i]+=e.amount_eur; }
-  let c=0; const pts=daily.map(v=>c+=v), max=Math.max(c,1);
-  const x=i=>P+i*(W-2*P)/(days-1), y=v=>H-P-v*(H-2*P)/max;
-  const line=pts.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  svg.innerHTML=`<defs><linearGradient id="gA" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#5b6cff" stop-opacity=".26"/><stop offset="1" stop-color="#5b6cff" stop-opacity="0"/></linearGradient></defs>
-    ${[.25,.5,.75].map(f=>`<line x1="${P}" x2="${W-P}" y1="${(H-2*P)*f+P}" y2="${(H-2*P)*f+P}" stroke="#eef0f6"/>`).join('')}
-    <path d="${line} L${x(days-1)},${H-P} L${x(0)},${H-P} Z" fill="url(#gA)"/>
-    <path d="${line}" fill="none" stroke="#5b6cff" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="${x(days-1)}" cy="${y(c)}" r="4" fill="#5b6cff"/>`;
-}
-
-async function refresh(){
-  try { await Promise.all([loadTopology(), loadBusiness(), loadPipeline(), loadSignals()]); }
-  catch(e){ $('#hero').textContent='HELYOS ne répond pas — démarre le noyau.'; }
-}
-refresh();
-setInterval(()=>{ if(document.visibilityState==='visible') refresh(); }, 8000);
+function boot(){ loadBriefing(); loadHealth(); loadState(); }
+boot();
+setInterval(()=>{ if(document.visibilityState==='visible'){ loadHealth(); } }, 12000);
 </script>
 </body>
 </html>
