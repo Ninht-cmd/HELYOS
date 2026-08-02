@@ -26,6 +26,25 @@ class Domain:
     entity_types: dict = field(default_factory=dict)      # {name: EntityType} injectés/enrichis
     relation_types: dict = field(default_factory=dict)
     equations: dict = field(default_factory=dict)         # {nom: fonction pure} — les lois du domaine
+    reference_cases: list = field(default_factory=list)   # cas de validation (inputs -> valeur attendue)
+
+
+def validate_domain(domain: Domain) -> dict:
+    """Exécute les cas de référence d'un domaine : chaque équation doit reproduire une
+    valeur connue (manuel/norme). C'est la « validation set » au niveau des lois — la
+    condition pour faire confiance à un domaine avant de l'alimenter en données réelles."""
+    results, ok = [], 0
+    for case in domain.reference_cases:
+        fn = domain.equations.get(case["equation"])
+        try:
+            got = fn(**case.get("kwargs", {}))
+            passed = abs(got - case["expected"]) <= case.get("tol", 1e-6)
+        except Exception as e:                            # pragma: no cover
+            got, passed = f"erreur: {e}", False
+        ok += bool(passed)
+        results.append({"equation": case["equation"], "attendu": case["expected"],
+                        "obtenu": round(got, 6) if isinstance(got, float) else got, "ok": bool(passed)})
+    return {"domaine": domain.name, "passes": ok, "total": len(domain.reference_cases), "details": results}
 
 
 def build_ontology(*domains: Domain) -> Ontology:
@@ -39,7 +58,8 @@ def build_ontology(*domains: Domain) -> Ontology:
 def all_domains() -> list[Domain]:
     from .finance import FINANCE
     from .engineering import ENGINEERING
-    return [FINANCE, ENGINEERING]
+    from .trading import TRADING
+    return [FINANCE, ENGINEERING, TRADING]
 
 
 def full_ontology() -> Ontology:
