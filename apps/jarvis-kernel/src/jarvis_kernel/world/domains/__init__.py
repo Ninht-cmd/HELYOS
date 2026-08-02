@@ -59,7 +59,8 @@ def all_domains() -> list[Domain]:
     from .finance import FINANCE
     from .engineering import ENGINEERING
     from .trading import TRADING
-    return [FINANCE, ENGINEERING, TRADING]
+    from .supply_chain import SUPPLY_CHAIN
+    return [FINANCE, ENGINEERING, TRADING, SUPPLY_CHAIN]
 
 
 def full_ontology() -> Ontology:
