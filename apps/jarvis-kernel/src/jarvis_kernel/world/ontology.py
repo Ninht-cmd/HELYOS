@@ -233,6 +233,14 @@ class KnowledgeGraph:
                             for t in {e.type for e in self.entities.values()}},
                 "beliefs": len(self.world.beliefs)}
 
+    def clone(self) -> "KnowledgeGraph":
+        """Copie profonde (pour simuler « et si » sans toucher l'état réel)."""
+        g = KnowledgeGraph(self.onto, WorldModel.from_dict(self.world.to_dict()))
+        g.entities = {i: Entity(e.id, e.type, e.label, dict(e.meta)) for i, e in self.entities.items()}
+        g.edges = list(self.edges)
+        g._derived = list(self._derived)
+        return g
+
     # --- persistance ---
     def to_dict(self) -> dict:
         return {"ontology": self.onto.to_dict(),
@@ -298,6 +306,30 @@ def default_ontology() -> Ontology:
             A("part_marche", "ratio"), A("force", "ratio")]),
         ET("Knowledge", "Un nœud de connaissance (fait, techno, dépendance)", [
             A("confiance", "ratio")]),
+        # --- Reality Layer v1.1 : objectifs, ressources, flux, événements ---
+        ET("Goal", "Un objectif structuré (première classe)", [
+            A("priorite", "ratio"), A("horizon_mois", "months", "mois"),
+            A("budget", "money", "€"), A("risque", "ratio"), A("progres", "ratio")]),
+        ET("Project", "Un projet (agrège des tâches/ressources vers un but)", [
+            A("budget", "money", "€"), A("avancement", "ratio"),
+            A("risque", "ratio"), A("deadline_mois", "months", "mois")]),
+        ET("Process", "Un flux (entrée → actions → sortie)", [
+            A("conversion", "ratio"), A("cout", "money", "€"),
+            A("duree_jours", "count"), A("debit", "count")]),
+        ET("Resource", "Une ressource (financière/humaine/matérielle/numérique)", [
+            A("quantite", "metric"), A("cout", "money", "€"), A("disponibilite", "ratio")]),
+        ET("Contract", "Un contrat/engagement", [
+            A("valeur", "money", "€"), A("duree_mois", "months", "mois"), A("risque", "ratio")]),
+        ET("Event", "Un événement qui change le monde", [
+            A("amplitude", "ratio"), A("probabilite", "ratio")]),
+        ET("Material", "Un matériau", [
+            A("cout_kg", "money", "€/kg"), A("densite", "metric"), A("resistance", "metric")]),
+        ET("Technology", "Une technologie", [
+            A("maturite", "ratio"), A("cout_adoption", "money", "€")]),
+        ET("Location", "Un lieu / une juridiction", [
+            A("cout_vie", "ratio"), A("risque_geo", "ratio")]),
+        ET("Risk", "Un risque de première classe", [
+            A("probabilite", "ratio"), A("impact", "ratio"), A("exposition", "money", "€")]),
     ])
 
     R = lambda name, inv, sem: (name, RelationSpec(name, inv, sem))
@@ -315,5 +347,16 @@ def default_ontology() -> Ontology:
         R("trades", "traded_by", "flow"),
         R("composed_of", "part_of", "composition"),
         R("operated_by", "operates", "ownership"),
+        # --- Reality Layer v1.1 ---
+        R("has_goal", "goal_of", "association"),
+        R("part_of_project", "includes", "composition"),
+        R("consumes", "consumed_by", "flow"),
+        R("governed_by", "governs", "association"),
+        R("affected_by", "affects", "impact"),
+        R("located_in", "hosts", "association"),
+        R("made_of", "material_of", "composition"),
+        R("realizes", "realized_by", "dependency"),
+        R("exposes", "exposed_by", "impact"),
+        R("runs", "run_by", "ownership"),
     ])
     return Ontology(entity_types, relation_types)

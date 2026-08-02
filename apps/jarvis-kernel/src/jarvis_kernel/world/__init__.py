@@ -10,7 +10,11 @@ from .decision import Action, Decision as WorldDecision, Policy
 from .seed import seed_world
 from .ontology import (AttrSpec, Entity, EntityType, KnowledgeGraph, Ontology,
                        RelationSpec, default_ontology)
+from .reality import (Response, apply_event, company_utility, feasible,
+                      goal_attainment, resource_pool, respond, rollout)
 
 __all__ = ["Belief", "WorldModel", "Action", "WorldDecision", "Policy", "seed_world",
            "AttrSpec", "Entity", "EntityType", "KnowledgeGraph", "Ontology",
-           "RelationSpec", "default_ontology"]
+           "RelationSpec", "default_ontology",
+           "Response", "apply_event", "company_utility", "feasible",
+           "goal_attainment", "resource_pool", "respond", "rollout"]
