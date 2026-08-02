@@ -80,6 +80,22 @@ class Ontology:
             raise ValueError(f"type de relation inconnu : {name!r}")
         return self.relation_types[name]
 
+    def extend(self, entity_types: dict | None = None, relation_types: dict | None = None) -> "Ontology":
+        """Injection par un domaine : fusionne de nouveaux types/relations et AJOUTE des
+        attributs à un type existant (ex. Finance enrichit `BusinessUnit`, Engineering
+        enrichit `Machine`/`Part`). C'est le « Domain Schema → Variables »."""
+        for name, et in (entity_types or {}).items():
+            if name in self.entity_types:
+                merged = dict(self.entity_types[name].attrs)
+                merged.update(et.attrs)
+                self.entity_types[name] = EntityType(name, merged,
+                                                     et.description or self.entity_types[name].description)
+            else:
+                self.entity_types[name] = et
+        for name, rt in (relation_types or {}).items():
+            self.relation_types.setdefault(name, rt)
+        return self
+
     # --- (dé)sérialisation du schéma : ontologie-comme-donnée ---
     def to_dict(self) -> dict:
         return {

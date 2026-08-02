@@ -113,6 +113,30 @@ def monte_carlo(graph: KnowledgeGraph, company_id: str, plan: Plan, now: float, 
             "p_succes": round(successes / n, 3) if goal_id else None}
 
 
+def monte_carlo_metric(graph: KnowledgeGraph, metric_fn, now: float, *, plan: Plan | None = None,
+                       n: int = 2000, seed: int = 0) -> dict:
+    """Monte-Carlo sur une MÉTRIQUE scalaire arbitraire (VAN, profit annuel, cadence…).
+    `metric_fn(graph) -> float` est évaluée sur chaque futur échantillonné (+ plan/événements).
+    Renvoie la distribution + P(métrique < 0)."""
+    rng = random.Random(seed)
+    vals = []
+    for _ in range(n):
+        g = _sample(graph, rng)
+        if plan is not None:
+            for act in plan.actions:
+                _apply_effects(g, act.effects)
+            for ev in plan.events:
+                if rng.random() < ev.probability:
+                    _apply_effects(g, [(k, ev.op, v) for k, v in ev.interventions.items()])
+            g.recompute()
+        vals.append(float(metric_fn(g)))
+    mean = sum(vals) / len(vals)
+    std = (sum((v - mean) ** 2 for v in vals) / len(vals)) ** 0.5
+    return {"n": n, "mean": round(mean, 2), "std": round(std, 2),
+            "p5": _pct(vals, 5), "p50": _pct(vals, 50), "p95": _pct(vals, 95),
+            "p_negatif": round(sum(1 for v in vals if v < 0) / n, 3)}
+
+
 def risk_adjusted(dist: dict, risk_aversion: float) -> float:
     """Score = E[U] − λ·σ. λ (aversion) vient de la tolérance au risque de l'objectif :
     λ faible = joueur (favorise l'espérance) ; λ élevé = prudent (pénalise la variance)."""
