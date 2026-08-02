@@ -10,6 +10,7 @@ from jarvis_kernel.world.domains import validate_domain
 from jarvis_kernel.world.domains.supply_chain import (SUPPLY_CHAIN, eoq, inventory_policy,
                                                       lead_time_demand_std, normal_loss,
                                                       reorder_point, safety_stock,
+                                                      service_level_distribution,
                                                       service_level_z, simulate_service_level)
 from jarvis_kernel.world.learning import CausalLaw, calibration
 from jarvis_kernel.world.registry import ModelRegistry
@@ -37,6 +38,15 @@ class TestMonteCarloConsistency(unittest.TestCase):
         rop = mean_dlt + service_level_z(0.95) * sigma_dlt
         sim = simulate_service_level(mean_dlt, sigma_dlt, rop, n=20000, seed=1)
         self.assertAlmostEqual(sim["service_level"], 0.95, delta=0.02)
+
+    def test_distribution_histogram_and_percentiles(self) -> None:
+        mean_dlt, sigma_dlt = 90.0, 11.66
+        rop = mean_dlt + service_level_z(0.95) * sigma_dlt
+        d = service_level_distribution(mean_dlt, sigma_dlt, rop, n=20000, seed=1, bins=26)
+        self.assertEqual(sum(d["counts"]), 20000)                    # tous les tirages classés
+        self.assertLess(d["p5"], d["p50"])
+        self.assertLess(d["p50"], d["p95"])
+        self.assertAlmostEqual(d["service_level"], 0.95, delta=0.02)
 
 
 class TestEndToEndPolicy(unittest.TestCase):

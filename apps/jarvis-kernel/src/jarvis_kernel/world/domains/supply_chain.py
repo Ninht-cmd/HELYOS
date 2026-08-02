@@ -103,6 +103,26 @@ def simulate_service_level(mean_dlt: float, sigma_dlt: float, rop: float, *,
             "mean_shortage": round(shortage_sum / n, 3)}
 
 
+def service_level_distribution(mean_dlt: float, sigma_dlt: float, rop: float, *,
+                               n: int = 20000, seed: int = 0, bins: int = 24) -> dict:
+    """Distribution complète de la demande pendant le délai (pour la visualisation) :
+    histogramme, P5/P50/P95, et niveau de service atteint face au point de commande."""
+    rng = random.Random(seed)
+    samples = [rng.gauss(mean_dlt, sigma_dlt) for _ in range(n)]
+    lo, hi = min(samples), max(samples)
+    width = (hi - lo) / bins or 1.0
+    counts = [0] * bins
+    for s in samples:
+        counts[min(bins - 1, int((s - lo) / width))] += 1
+    ss = sorted(samples)
+    pct = lambda p: ss[min(n - 1, int(p / 100 * (n - 1)))]
+    service = sum(1 for s in samples if s <= rop) / n
+    return {"lo": round(lo, 2), "hi": round(hi, 2), "width": round(width, 3), "bins": bins,
+            "counts": counts, "p5": round(pct(5), 2), "p50": round(pct(50), 2),
+            "p95": round(pct(95), 2), "service_level": round(service, 4),
+            "rop": round(rop, 2), "mean_dlt": round(mean_dlt, 2)}
+
+
 # ------------------------------------------------------------------ domaine + cas de référence
 SUPPLY_CHAIN = Domain(
     name="supply_chain",
