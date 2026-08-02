@@ -27,7 +27,7 @@ from .observability.tracing import span
 # Intentions reconnues. La classification renvoie l'une de ces étiquettes.
 INTENTS = ("portefeuille", "commandes", "tresorerie", "prospection", "relance_factures",
            "creer_business", "conseil", "recherche", "marche_financier", "simulation_trading",
-           "nvidia_lab", "open_source_lab", "modules", "generation", "raisonnement",
+           "nvidia_lab", "open_source_lab", "modules", "monde", "generation", "raisonnement",
            "action_dangereuse", "conversation")
 
 # Filet déterministe (marche sans LLM). Motifs verbe/sujet, pas simples mots-clés.
@@ -41,6 +41,11 @@ _RULES: list[tuple[str, str]] = [
     ("action_dangereuse", r"supprim|efface|d[ée]truis|vire?ment|paie(?!ment)|transf[eè]re|ach[eè]te\b|\bvends\b|\binvestis\b|donne.{0,10}droit|permission|privil[eè]g"),
     # commandes (les deux sens) et fournisseurs — AVANT tresorerie (« commande » ≠ « encaisse »)
     ("commandes", r"commande|fournisseur|\bachats?\b|\bventes?\b|\blivrer\b|\blivr[ée]e|carnet"),
+    # LE MODÈLE DU MONDE : l'état probabiliste S_t + la fonction d'utilité + la décision
+    # (argmax ΔU). « quelle décision », « état du monde », « ma meilleure action ».
+    ("monde", r"mod[eè]le du monde|world model|[ée]tat du monde|"
+              r"que d[ée]cides|quelle (est ta |)d[ée]cision|fonction d'?utilit[ée]|"
+              r"utilit[ée] du syst|prochaine meilleure action|argmax|quelle action.{0,20}(prioritaire|maintenant)"),
     # GÉNÉRATION de vrais livrables (code qui compile, plan d'ingénierie, plan business).
     # AVANT « raisonnement » : « génère un script » doit PRODUIRE un fichier, pas juste réfléchir.
     # Les mots-clés code/plan sont exigés pour ne pas happer « écris une relance » (→ factures).
@@ -167,6 +172,8 @@ class Jarvis:
                 reply = self._business(message, granted)
             elif intent == "conseil":
                 reply = self._advisory(message, granted)
+            elif intent == "monde":
+                reply = self._world(message, granted)
             elif intent == "generation":
                 reply = self._generation(message, granted)
             elif intent == "raisonnement":
@@ -307,6 +314,37 @@ class Jarvis:
         suffix = (f"\n\n(consulté : {', '.join(dict.fromkeys(s['tool'] for s in reads))})"
                   if reads else "")
         return JarvisReply("raisonnement", (head + body + suffix).strip(), True, "allow")
+
+    def _world(self, message: str, granted: AutonomyLevel) -> JarvisReply:
+        """Le modèle du monde : état probabiliste S_t → utilité U(S) → décision argmax ΔU.
+        Analyse (A1). HELYOS ne 'répond' pas : il consulte son modèle interne et décide."""
+        import time
+
+        from .world.decision import Policy, utility
+        from .world.seed import default_actions, seed_world
+
+        now = time.time()
+        w = seed_world(self.ctx, now)
+        try:
+            w.save(self.ctx.memory)          # persiste l'état pour la prochaine fois
+        except Exception:
+            pass
+        score, rows = utility(w, now)
+        risk = next((r for r in rows if r["terme"] == "risque"), {"contribution": 0})
+        decisions = Policy().decide(w, default_actions(), now)
+        cash = w.get("cash")
+        head = (f"🌐 Modèle du monde — U(S) = {score:+.3f} "
+                f"({'dominé par le risque' if risk['contribution'] <= -0.15 else 'sous contrôle'}).\n"
+                f"État : cash {cash.value:.0f}€ (conf {cash.confidence(now):.2f}) · "
+                f"risque paiement {w.value('risque_paiement'):.1f} · "
+                f"risque légal {w.value('risque_legal'):.1f} · runway ~{w.value('runway_mois'):.1f} mois.\n"
+                "Décision (argmax ΔU) — calculée, pas devinée :")
+        top = "\n".join(f"  {i}. ΔU={d.gain:+.3f}  {d.action.description}"
+                        for i, d in enumerate(decisions[:3], 1))
+        neg = [d for d in decisions if d.gain < 0]
+        tail = (f"\n(Écarté : {neg[0].action.description} — ΔU {neg[0].gain:+.3f}, coût > gain maintenant.)"
+                if neg else "")
+        return JarvisReply("monde", head + "\n" + top + tail, True, "allow")
 
     def _generation(self, message: str, granted: AutonomyLevel) -> JarvisReply:
         """Produit un VRAI livrable (code qui compile, plan d'ingénierie, plan business)
