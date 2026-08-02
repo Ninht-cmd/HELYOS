@@ -14,6 +14,7 @@ from .reality import (Response, apply_event, company_utility, feasible,
                       goal_attainment, resource_pool, respond, rollout)
 from .simulation import (Plan, StochasticEvent, feasible_resources, learn_elasticity,
                          monte_carlo, monte_carlo_metric, rank_trajectories, risk_adjusted)
+from .learning import CausalLaw, calibration, close_loop, relearn, wire_learned
 
 __all__ = ["Belief", "WorldModel", "Action", "WorldDecision", "Policy", "seed_world",
            "AttrSpec", "Entity", "EntityType", "KnowledgeGraph", "Ontology",
@@ -21,4 +22,5 @@ __all__ = ["Belief", "WorldModel", "Action", "WorldDecision", "Policy", "seed_wo
            "Response", "apply_event", "company_utility", "feasible",
            "goal_attainment", "resource_pool", "respond", "rollout",
            "Plan", "StochasticEvent", "feasible_resources", "learn_elasticity",
-           "monte_carlo", "monte_carlo_metric", "rank_trajectories", "risk_adjusted"]
+           "monte_carlo", "monte_carlo_metric", "rank_trajectories", "risk_adjusted",
+           "CausalLaw", "calibration", "close_loop", "relearn", "wire_learned"]
