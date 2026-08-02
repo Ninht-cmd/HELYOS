@@ -8,5 +8,9 @@ politique de décision (argmax de l'utilité espérée). Voir RFC-0019.
 from .model import Belief, WorldModel
 from .decision import Action, Decision as WorldDecision, Policy
 from .seed import seed_world
+from .ontology import (AttrSpec, Entity, EntityType, KnowledgeGraph, Ontology,
+                       RelationSpec, default_ontology)
 
-__all__ = ["Belief", "WorldModel", "Action", "WorldDecision", "Policy", "seed_world"]
+__all__ = ["Belief", "WorldModel", "Action", "WorldDecision", "Policy", "seed_world",
+           "AttrSpec", "Entity", "EntityType", "KnowledgeGraph", "Ontology",
+           "RelationSpec", "default_ontology"]
