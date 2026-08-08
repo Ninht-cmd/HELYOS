@@ -193,22 +193,22 @@ def _supply_chain_handler(sg: SubGoal, ctx: dict) -> dict:
     return out
 
 
+def _dev_findings(ctx: dict) -> list[dict]:
+    """Findings AST normalisés (avec preuve), calculés une fois et mis en cache dans ctx."""
+    if "_findings" in ctx:
+        return ctx["_findings"]
+    bus = ctx.get("bus")
+    fs = (bus.read("project", "findings", limit=20).data if bus is not None else []) or []
+    ctx["_findings"] = fs
+    return fs
+
+
 def _dev_candidates(ctx: dict) -> list[str]:
-    """Problèmes RÉELS (analyse statique), pas seulement TODO/FIXME : modules sans tests,
-    code mort probable, modules volumineux. Injectables via ctx['candidates'] pour les tests."""
+    """Recommandations issues de l'analyse AST (imports/deadcode/complexité/tests).
+    Injectables via ctx['candidates'] pour les tests."""
     if ctx.get("candidates"):
         return list(ctx["candidates"])
-    bus = ctx.get("bus")
-    if bus is None:
-        return []
-    cands = []
-    for m in (bus.read("project", "untested").data or [])[:5]:
-        cands.append(f"ajouter des tests pour le module « {m} »")
-    for d in (bus.read("project", "deadcode").data or [])[:3]:
-        cands.append(f"vérifier le code mort probable {d['name']} ({d['file']})")
-    for l in (bus.read("project", "large").data or [])[:2]:
-        cands.append(f"découper le module volumineux {l['file']} ({l['lines']} lignes)")
-    return cands or ["amélioration générique"]
+    return [f["recommendation"] for f in _dev_findings(ctx)] or ["amélioration générique"]
 
 
 def _dev_handler(sg: SubGoal, ctx: dict) -> dict:
@@ -234,25 +234,34 @@ def _dev_handler(sg: SubGoal, ctx: dict) -> dict:
         return {"result": f"(GitHub indisponible) dépôt local : {len(commits.data or [])} commits, "
                 f"{mods.data} modules.", "confidence": 0.6, "sources": ["git local"]}
 
+    findings = _dev_findings(ctx)
     cands = _dev_candidates(ctx)
     fresh = [c for c in cands if c not in rejected]
 
     if sg.kind == "analyze":
         note = " (j'écarte une piste déjà refusée)" if len(fresh) != len(cands) else ""
-        top = fresh[0] if fresh else (cands[0] if cands else "—")
-        return {"result": f"{len(cands)} amélioration(s) réelle(s) identifiée(s){note} ; priorité : {top}.",
-                "confidence": 0.82,
-                "sources": ["analyse statique : tests manquants, code mort, taille des modules"]}
+        top = next((f for f in findings if f["recommendation"] in fresh),
+                   findings[0] if findings else None)
+        if top:
+            res = (f"{len(findings)} findings AST{note} ; priorité "
+                   f"[{top['category']}/{top['severity']}] {top['symbol']} — {top['recommendation']} "
+                   f"(preuve : {top['evidence'][0]}).")
+            return {"result": res, "confidence": top["confidence"],
+                    "sources": ["analyse AST : imports · code mort · complexité · tests"]}
+        return {"result": "aucun finding AST.", "confidence": 0.5, "sources": ["analyse AST"]}
 
     if sg.kind == "propose":
         chosen = fresh[0] if fresh else (cands[0] if cands else "amélioration générique")
+        top = next((f for f in findings if f["recommendation"] == chosen), None)
         pre = ""
         if rejected:
             y = next(iter(rejected))
             pre = f"La piste « {y} » avait été refusée ; je ne la re-propose pas. "
-        res = pre + f"Je propose : {chosen} — patch préparé, en attente de ton autorisation."
-        return {"result": res, "confidence": 0.6, "sources": ["analyse statique + GitHub"],
-                "decision": {"content": chosen, "entities": ["repo"]}}
+        ev = f" [preuve : {', '.join(top['evidence'][:2])}]" if top else ""
+        res = pre + f"Je propose : {chosen}{ev} — patch préparé, en attente de ton autorisation."
+        return {"result": res, "confidence": top["confidence"] if top else 0.6,
+                "sources": ["analyse AST + GitHub"],
+                "decision": {"content": chosen, "entities": [top["symbol"]] if top else ["repo"]}}
 
     return {"result": sg.text, "confidence": 0.5, "sources": []}
 

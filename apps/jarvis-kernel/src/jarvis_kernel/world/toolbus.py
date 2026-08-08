@@ -82,6 +82,10 @@ class ProjectConnector:
             base = self.root / "apps" / "jarvis-kernel" / "tests"
             return ReadResult(self.name, op, True, sum(1 for _ in base.glob("test_*.py")), str(base))
         # --- analyse logicielle réelle (au-delà des TODO/FIXME) ---
+        if op == "findings":                            # findings AST normalisés (avec preuve)
+            from .ast_analysis import analyze_repo, as_dicts
+            return ReadResult(self.name, op, True,
+                              as_dicts(analyze_repo(self.root))[:p.get("limit", 30)], "analyse AST")
         if op in ("untested", "large", "deadcode"):
             return self._analyze(op, **p)
         return ReadResult(self.name, op, False, None, src, f"opération inconnue : {op}")
