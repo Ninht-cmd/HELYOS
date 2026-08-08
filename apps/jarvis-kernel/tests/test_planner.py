@@ -64,11 +64,12 @@ class TestOrchestration(unittest.TestCase):
 
 class TestDevScenario(unittest.TestCase):
     def test_analyse_project_uses_real_repo_and_gates_write(self) -> None:
-        from jarvis_kernel.world.toolbus import default_bus
+        from jarvis_kernel.world.toolbus import ProjectConnector, ToolBus
         gov = GovernanceService()
         orch = default_orchestrator()
+        bus = ToolBus(gov); bus.register(ProjectConnector())      # réseau-indépendant
         plan = orch.run("analyse HELYOS et corrige un problème dans le projet",
-                        {"bus": default_bus(gov)}, governance=gov, granted=AutonomyLevel.A2)
+                        {"bus": bus}, governance=gov, granted=AutonomyLevel.A2)
         self.assertEqual(len(plan["etapes"]), 3)
         self.assertTrue(all(s["agent"] == "dev_agent" for s in plan["etapes"]))
         self.assertIn("commits", plan["etapes"][0]["resultat"])       # lecture réelle du dépôt

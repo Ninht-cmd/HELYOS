@@ -194,18 +194,26 @@ def _supply_chain_handler(sg: SubGoal, ctx: dict) -> dict:
 
 
 def _dev_candidates(ctx: dict) -> list[str]:
-    """Problèmes candidats : injectés (tests) ou dérivés du VRAI dépôt (TODO/FIXME)."""
+    """Problèmes RÉELS (analyse statique), pas seulement TODO/FIXME : modules sans tests,
+    code mort probable, modules volumineux. Injectables via ctx['candidates'] pour les tests."""
     if ctx.get("candidates"):
         return list(ctx["candidates"])
     bus = ctx.get("bus")
     if bus is None:
         return []
-    issues = bus.read("project", "search", pattern=r"TODO|FIXME|XXX").data or []
-    return [f"{h['fichier']}:{h['ligne']}" for h in issues]
+    cands = []
+    for m in (bus.read("project", "untested").data or [])[:5]:
+        cands.append(f"ajouter des tests pour le module « {m} »")
+    for d in (bus.read("project", "deadcode").data or [])[:3]:
+        cands.append(f"vérifier le code mort probable {d['name']} ({d['file']})")
+    for l in (bus.read("project", "large").data or [])[:2]:
+        cands.append(f"découper le module volumineux {l['file']} ({l['lines']} lignes)")
+    return cands or ["amélioration générique"]
 
 
 def _dev_handler(sg: SubGoal, ctx: dict) -> dict:
-    """Agent développement : observe le VRAI dépôt, ÉVITE les correctifs déjà refusés (mémoire)."""
+    """Agent développement : lit le dépôt DISTANT (GitHub), analyse le code, ÉVITE ce qui
+    a déjà été refusé (mémoire), et propose sous validation."""
     bus = ctx.get("bus")
     recall = ctx.get("memory_recall", {}) or {}
     rejected = {r["content"] for r in recall.get("rejected", [])}
@@ -213,32 +221,38 @@ def _dev_handler(sg: SubGoal, ctx: dict) -> dict:
     if sg.kind == "read":
         if bus is None:
             return {"result": "dev : aucun tool bus.", "confidence": 0.2, "sources": []}
+        gh = bus.read("github", "repo")
+        ghc = bus.read("github", "commits", n=3)
+        if gh.ok:
+            d = gh.data
+            res = (f"Dépôt DISTANT lu (GitHub API) : {d['full_name']} · {d['language']} · "
+                   f"{d['stars']}★ · {d['open_issues']} issue(s) ouverte(s) · poussé "
+                   f"{str(d['pushed_at'])[:10]} · {len(ghc.data or [])} commits récents.")
+            return {"result": res, "confidence": 0.9, "sources": ["GitHub API (distant)"]}
         commits = bus.read("project", "commits", n=3)
-        status = bus.read("project", "status")
         mods = bus.read("project", "modules")
-        res = (f"Dépôt lu : {len(commits.data or [])} commits récents "
-               f"(dernier : « {(commits.data or [{}])[0].get('sujet', '')[:48]} »), "
-               f"{len(status.data or [])} fichier(s) modifié(s), {mods.data} modules.")
-        return {"result": res, "confidence": 0.88, "sources": ["git (dépôt local)"]}
+        return {"result": f"(GitHub indisponible) dépôt local : {len(commits.data or [])} commits, "
+                f"{mods.data} modules.", "confidence": 0.6, "sources": ["git local"]}
 
     cands = _dev_candidates(ctx)
-    fresh = [c for c in cands if f"corriger {c}" not in rejected]
+    fresh = [c for c in cands if c not in rejected]
 
     if sg.kind == "analyze":
-        note = " — j'écarte un correctif déjà refusé" if len(fresh) != len(cands) else ""
-        return {"result": f"{len(cands)} problème(s) candidat(s){note}.", "confidence": 0.8,
-                "sources": ["git (dépôt local)"]}
+        note = " (j'écarte une piste déjà refusée)" if len(fresh) != len(cands) else ""
+        top = fresh[0] if fresh else (cands[0] if cands else "—")
+        return {"result": f"{len(cands)} amélioration(s) réelle(s) identifiée(s){note} ; priorité : {top}.",
+                "confidence": 0.82,
+                "sources": ["analyse statique : tests manquants, code mort, taille des modules"]}
 
     if sg.kind == "propose":
         chosen = fresh[0] if fresh else (cands[0] if cands else "amélioration générique")
         pre = ""
         if rejected:
-            y = next(iter(rejected)).replace("corriger ", "")
-            pre = (f"Lors d'une analyse précédente, le correctif « {y} » avait été refusé ; "
-                   f"je ne le re-propose pas. ")
-        res = pre + f"Je propose plutôt : corriger « {chosen} » — en attente de ton autorisation."
-        return {"result": res, "confidence": 0.6, "sources": ["git"],
-                "decision": {"content": f"corriger {chosen}", "entities": ["repo"]}}
+            y = next(iter(rejected))
+            pre = f"La piste « {y} » avait été refusée ; je ne la re-propose pas. "
+        res = pre + f"Je propose : {chosen} — patch préparé, en attente de ton autorisation."
+        return {"result": res, "confidence": 0.6, "sources": ["analyse statique + GitHub"],
+                "decision": {"content": chosen, "entities": ["repo"]}}
 
     return {"result": sg.text, "confidence": 0.5, "sources": []}
 

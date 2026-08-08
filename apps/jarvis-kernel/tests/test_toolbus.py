@@ -6,7 +6,7 @@ import unittest
 
 from jarvis_kernel.governance.autonomy import AutonomyLevel
 from jarvis_kernel.governance.service import GovernanceService
-from jarvis_kernel.world.toolbus import ProjectConnector, ToolBus, default_bus
+from jarvis_kernel.world.toolbus import GitHubConnector, ProjectConnector, ToolBus, default_bus
 
 
 class TestProjectConnector(unittest.TestCase):
@@ -27,6 +27,25 @@ class TestProjectConnector(unittest.TestCase):
         r = self.c.read("search", pattern=r"def ", limit=5)
         self.assertTrue(r.ok)
         self.assertIsInstance(r.data, list)
+
+    def test_real_static_analysis(self) -> None:
+        # analyses réelles (au-delà des TODO/FIXME) : listes exploitables
+        self.assertIsInstance(self.c.read("untested").data, list)
+        big = self.c.read("large", min_lines=200).data
+        self.assertTrue(all(b["lines"] >= 200 for b in big))       # seuil respecté
+        dead = self.c.read("deadcode").data
+        self.assertTrue(all("name" in d and "file" in d for d in dead))
+
+
+class TestGitHubConnectorLive(unittest.TestCase):
+    """Lecture DISTANTE réelle via l'API publique — résilient si le réseau est indisponible."""
+
+    def test_reads_remote_repo(self) -> None:
+        r = GitHubConnector("Ninht-cmd", "HELYOS").read("repo")
+        if not r.ok:
+            self.skipTest(f"réseau/GitHub indisponible : {r.note}")
+        self.assertEqual(r.data["full_name"], "Ninht-cmd/HELYOS")
+        self.assertFalse(r.data["private"])                        # dépôt public réel
 
 
 class TestGovernedBus(unittest.TestCase):
