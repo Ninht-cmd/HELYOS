@@ -62,5 +62,34 @@ class TestOrchestration(unittest.TestCase):
         self.assertEqual(prop["gouvernance"]["decision"], "require_validation")
 
 
+class TestDevScenario(unittest.TestCase):
+    def test_analyse_project_uses_real_repo_and_gates_write(self) -> None:
+        from jarvis_kernel.world.toolbus import default_bus
+        gov = GovernanceService()
+        orch = default_orchestrator()
+        plan = orch.run("analyse HELYOS et corrige un problème dans le projet",
+                        {"bus": default_bus(gov)}, governance=gov, granted=AutonomyLevel.A2)
+        self.assertEqual(len(plan["etapes"]), 3)
+        self.assertTrue(all(s["agent"] == "dev_agent" for s in plan["etapes"]))
+        self.assertIn("commits", plan["etapes"][0]["resultat"])       # lecture réelle du dépôt
+        prop = next(s for s in plan["etapes"] if s["kind"] == "propose")
+        self.assertEqual(prop["gouvernance"]["decision"], "require_validation")
+
+
+class TestSupplyDifferentiation(unittest.TestCase):
+    def test_analyze_compare_simulate_differ(self) -> None:
+        orch = default_orchestrator()
+        ctx = {"rows": read_receptions_csv(CSV), "target": "FRN-07", "prior_lead_time": 9.0,
+               "policy_params": dict(demand=10, sigma_demand=2, sigma_lead_time=1, service_level=0.95,
+                                     annual_demand=3650, order_cost=50, holding_cost=2, stockout_cost=20)}
+        plan = orch.run("réduire les coûts de 15%", {**ctx, "annual_cost": 120000, "target_reduction_pct": 15})
+        sc = [s["resultat"] for s in plan["etapes"] if s["domaine"] == "supply_chain"]
+        self.assertEqual(len(sc), 3)
+        self.assertEqual(len(set(sc)), 3)                              # les 3 étapes DIFFÈRENT désormais
+        self.assertTrue(any("Diagnostic" in r for r in sc))
+        self.assertTrue(any("Comparaison" in r for r in sc))
+        self.assertTrue(any("Simulation" in r for r in sc))
+
+
 if __name__ == "__main__":
     unittest.main()
