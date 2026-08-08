@@ -102,7 +102,8 @@ class Orchestrator:
         insights = OutcomeAnalyzer().insights(memory, objective) if memory is not None else []
         memory_context = OutcomeAnalyzer().render(memory, insights) if memory is not None else ""
         objective_id = memory.start_episode(objective) if memory is not None else None
-        ctx = {**(context or {}), "memory_recall": recall, "insights": insights, "objective_id": objective_id}
+        ctx = {**(context or {}), "memory_recall": recall, "insights": insights,
+               "objective_id": objective_id, "memory": memory}
 
         subgoals = self.planner.decompose(objective, insights)
         reuses_confirmed_gain = any(sg.kind == "reuse" for sg in subgoals)
@@ -257,11 +258,18 @@ def _dev_handler(sg: SubGoal, ctx: dict) -> dict:
         if rejected:
             y = next(iter(rejected))
             pre = f"La piste « {y} » avait été refusée ; je ne la re-propose pas. "
-        ev = f" [preuve : {', '.join(top['evidence'][:2])}]" if top else ""
-        res = pre + f"Je propose : {chosen}{ev} — patch préparé, en attente de ton autorisation."
-        return {"result": res, "confidence": top["confidence"] if top else 0.6,
-                "sources": ["analyse AST + GitHub"],
-                "decision": {"content": chosen, "entities": [top["symbol"]] if top else ["repo"]}}
+        if top:
+            from .confidence import composite_for
+            cc = composite_for(top, ctx.get("memory"))
+            res = (pre + f"Je propose : {chosen} [{top['category']}/{top['severity']}]. "
+                   f"Preuve : {', '.join(top['evidence'][:2])}. Confiance {cc.explain()}. "
+                   f"Patch préparé, en attente de ton autorisation.")
+            return {"result": res, "confidence": cc.balanced, "sources": ["analyse AST + GitHub"],
+                    "composite": cc.explain(),
+                    "decision": {"content": chosen, "entities": [top["symbol"], f"category:{top['category']}"]}}
+        res = pre + f"Je propose : {chosen} — patch préparé, en attente de ton autorisation."
+        return {"result": res, "confidence": 0.6, "sources": ["analyse AST"],
+                "decision": {"content": chosen, "entities": ["repo"]}}
 
     return {"result": sg.text, "confidence": 0.5, "sources": []}
 
