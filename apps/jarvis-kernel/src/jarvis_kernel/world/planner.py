@@ -25,9 +25,10 @@ from ..governance.policy import Action, ActionType
 @dataclass
 class SubGoal:
     text: str
-    kind: str            # analyze | compare | simulate | propose | execute
-    domain: str          # supply_chain | finance | general
+    kind: str            # analyze | compare | simulate | propose | execute | reuse
+    domain: str          # supply_chain | finance | general | dev
     side_effect: bool = False    # étape à effet externe -> gouvernance
+    lever: bool = False          # nouveau levier (recherché après un succès partiel)
 
 
 @dataclass
@@ -40,7 +41,7 @@ class Capability:
 class Planner:
     """Décompose un objectif en sous-objectifs (méthodes HTN-lite)."""
 
-    def decompose(self, objective: str) -> list[SubGoal]:
+    def decompose(self, objective: str, insights: list | None = None) -> list[SubGoal]:
         o = (objective or "").lower()
         if re.search(r"projet|d[ée]p[oô]t|repo|code|bug|corrig|analyse.{0,15}helyos|github", o):
             return [
@@ -50,6 +51,17 @@ class Planner:
                         "propose", "dev", True),
             ]
         if re.search(r"co[uû]t|d[ée]pense|r[ée]duire|[ée]conom", o):
+            # Si un LEVIER précédent a partiellement réussi : conserver le gain confirmé et
+            # chercher d'AUTRES leviers plutôt que répéter la même décision.
+            if insights and any(i.reusable for i in insights):
+                return [
+                    SubGoal("Conserver le gain confirmé (décision précédente déjà validée)", "reuse", "general"),
+                    SubGoal("Analyser le coût de transport", "analyze", "general", lever=True),
+                    SubGoal("Analyser la taille des commandes (EOQ)", "analyze", "general", lever=True),
+                    SubGoal("Analyser les stocks de sécurité", "analyze", "general", lever=True),
+                    SubGoal("Simuler la combinaison des nouveaux leviers", "simulate", "general", lever=True),
+                    SubGoal("Proposer le meilleur nouveau plan (hors décision déjà prise)", "propose", "general", True),
+                ]
             m = re.search(r"(\d+)\s*%", o)
             pct = m.group(1) if m else "X"
             return [
@@ -84,13 +96,21 @@ class Orchestrator:
 
     def run(self, objective: str, context: dict | None = None, *, governance=None,
             granted: AutonomyLevel = AutonomyLevel.A2, memory=None) -> dict:
-        # 1. INTERROGER LA MÉMOIRE avant de planifier (qu'a-t-on déjà essayé / refusé ?)
+        from .outcome import OutcomeAnalyzer
+        # 1. INTERROGER LA MÉMOIRE avant de planifier : refus passés + RÉSULTATS mesurés.
         recall = memory.retrieve(objective) if memory is not None else {}
+        insights = OutcomeAnalyzer().insights(memory, objective) if memory is not None else []
+        memory_context = OutcomeAnalyzer().render(memory, insights) if memory is not None else ""
         objective_id = memory.start_episode(objective) if memory is not None else None
-        ctx = {**(context or {}), "memory_recall": recall, "objective_id": objective_id}
+        ctx = {**(context or {}), "memory_recall": recall, "insights": insights, "objective_id": objective_id}
+
+        subgoals = self.planner.decompose(objective, insights)
+        reuses_confirmed_gain = any(sg.kind == "reuse" for sg in subgoals)
+        nouveaux_leviers = sum(1 for sg in subgoals if sg.lever)
+        decisions_proposees = []
 
         steps = []
-        for i, sg in enumerate(self.planner.decompose(objective), 1):
+        for i, sg in enumerate(subgoals, 1):
             cap = self.route(sg)
             out = (cap.handler(sg, ctx) if cap
                    else {"result": f"(aucun agent pour « {sg.domain} »)", "confidence": 0.2, "sources": []})
@@ -115,12 +135,17 @@ class Orchestrator:
                         objective_id, step["agent"] or "?", dec["content"], status="proposed",
                         confidence=step["confiance"], sources=step["sources"], governance=gov or {},
                         entities=dec.get("entities", []))
+            if out.get("decision"):
+                decisions_proposees.append(out["decision"]["content"])
             steps.append(step)
 
         conf = round(sum(s["confiance"] for s in steps) / len(steps), 2) if steps else 0.0
         awaiting = any(s["gouvernance"] and s["gouvernance"]["decision"] == "require_validation" for s in steps)
         return {"objectif": objective, "objective_id": objective_id, "etapes": steps,
-                "confiance_globale": conf, "en_attente_validation": awaiting, "memoire": recall}
+                "confiance_globale": conf, "en_attente_validation": awaiting, "memoire": recall,
+                "memory_context": memory_context, "insights": insights,
+                "reuses_confirmed_gain": reuses_confirmed_gain, "nouveaux_leviers": nouveaux_leviers,
+                "decisions_proposees": decisions_proposees}
 
 
 # ---------------------------------------------------------------- agents réels enregistrés
@@ -137,15 +162,18 @@ def _supply_chain_handler(sg: SubGoal, ctx: dict) -> dict:
     t = sup.get(target, {"learned": 0.0, "n": 0})
     conf = min(0.95, 0.55 + 0.015 * t["n"])
     srcs = ["data/receptions.csv", "Learning Loop"]
+    decision = None
 
     if sg.kind == "analyze":                          # diagnostiquer la dérive
         drift = round(t["learned"] - prior, 2)
         res = (f"Diagnostic : {target} délai réel {t['learned']} j sur {t['n']} réceptions "
                f"(dérive {drift:+} j vs {prior} j de référence).")
-    elif sg.kind == "compare":                        # classer les fournisseurs
+    elif sg.kind == "compare":                        # classer les fournisseurs -> DÉCISION
         ranked = sorted(sup.items(), key=lambda kv: kv[1]["learned"])
+        best = ranked[0][0]
         res = ("Comparaison délais : " + " ; ".join(f"{s} {v['learned']} j" for s, v in ranked)
-               + f". Recommandé : {ranked[0][0]} (le plus rapide).")
+               + f". Recommandé : {best} (le plus rapide).")
+        decision = {"content": f"Passage vers {best}", "entities": [f"supplier:{best}"]}
     elif sg.kind == "simulate":                       # chiffrer l'impact de la dérive
         pp = ctx.get("policy_params")
         if pp:
@@ -159,7 +187,10 @@ def _supply_chain_handler(sg: SubGoal, ctx: dict) -> dict:
         conf = min(conf, 0.85)
     else:
         res = f"{len(sup)} fournisseur(s) analysé(s) sur données réelles."
-    return {"result": res, "confidence": conf, "sources": srcs}
+    out = {"result": res, "confidence": conf, "sources": srcs}
+    if decision is not None:
+        out["decision"] = decision
+    return out
 
 
 def _dev_candidates(ctx: dict) -> list[str]:
@@ -223,6 +254,9 @@ def _finance_handler(sg: SubGoal, ctx: dict) -> dict:
 
 
 def _general_handler(sg: SubGoal, ctx: dict) -> dict:
+    if sg.kind == "reuse":
+        return {"result": "Gain confirmé conservé — je réutilise la décision précédente au lieu de la répéter.",
+                "confidence": 0.8, "sources": ["mémoire"]}
     return {"result": f"{sg.text} — préparé, prêt pour validation." if sg.side_effect
             else f"{sg.text} — traité.", "confidence": 0.55, "sources": []}
 
