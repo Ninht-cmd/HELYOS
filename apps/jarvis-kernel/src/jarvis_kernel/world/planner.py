@@ -83,8 +83,12 @@ class Orchestrator:
         return next((c for c in self.capabilities if "general" in c.domains), None)
 
     def run(self, objective: str, context: dict | None = None, *, governance=None,
-            granted: AutonomyLevel = AutonomyLevel.A2) -> dict:
-        ctx = context or {}
+            granted: AutonomyLevel = AutonomyLevel.A2, memory=None) -> dict:
+        # 1. INTERROGER LA MÉMOIRE avant de planifier (qu'a-t-on déjà essayé / refusé ?)
+        recall = memory.retrieve(objective) if memory is not None else {}
+        objective_id = memory.start_episode(objective) if memory is not None else None
+        ctx = {**(context or {}), "memory_recall": recall, "objective_id": objective_id}
+
         steps = []
         for i, sg in enumerate(self.planner.decompose(objective), 1):
             cap = self.route(sg)
@@ -95,14 +99,28 @@ class Orchestrator:
                 v = governance.submit(Action(type=ActionType.EXTERNAL_SENSITIVE, actor="orchestrator",
                                              description=sg.text, sensitive=True), granted)
                 gov = {"decision": v.decision.value, "rule": v.rule, "reason": v.reason}
-            steps.append({"n": i, "sous_objectif": sg.text, "kind": sg.kind, "domaine": sg.domain,
-                          "agent": cap.name if cap else None, "resultat": out["result"],
-                          "confiance": round(out.get("confidence", 0.5), 2),
-                          "sources": out.get("sources", []), "gouvernance": gov})
+            step = {"n": i, "sous_objectif": sg.text, "kind": sg.kind, "domaine": sg.domain,
+                    "agent": cap.name if cap else None, "resultat": out["result"],
+                    "confiance": round(out.get("confidence", 0.5), 2),
+                    "sources": out.get("sources", []), "gouvernance": gov, "decision_id": None}
+            # 2. ENREGISTRER dans la mémoire (événement ; et décision si l'agent en propose une)
+            if memory is not None:
+                memory.record_event(sg.kind, objective_id, step["agent"] or "?", out["result"],
+                                    status="inferred", confidence=step["confiance"],
+                                    sources=step["sources"], governance=gov or {},
+                                    entities=out.get("decision", {}).get("entities", []))
+                dec = out.get("decision")
+                if dec is not None:
+                    step["decision_id"] = memory.record_decision(
+                        objective_id, step["agent"] or "?", dec["content"], status="proposed",
+                        confidence=step["confiance"], sources=step["sources"], governance=gov or {},
+                        entities=dec.get("entities", []))
+            steps.append(step)
+
         conf = round(sum(s["confiance"] for s in steps) / len(steps), 2) if steps else 0.0
         awaiting = any(s["gouvernance"] and s["gouvernance"]["decision"] == "require_validation" for s in steps)
-        return {"objectif": objective, "etapes": steps, "confiance_globale": conf,
-                "en_attente_validation": awaiting}
+        return {"objectif": objective, "objective_id": objective_id, "etapes": steps,
+                "confiance_globale": conf, "en_attente_validation": awaiting, "memoire": recall}
 
 
 # ---------------------------------------------------------------- agents réels enregistrés
@@ -144,12 +162,26 @@ def _supply_chain_handler(sg: SubGoal, ctx: dict) -> dict:
     return {"result": res, "confidence": conf, "sources": srcs}
 
 
-def _dev_handler(sg: SubGoal, ctx: dict) -> dict:
-    """Agent développement : observe le VRAI dépôt via le Tool Bus, propose sous validation."""
+def _dev_candidates(ctx: dict) -> list[str]:
+    """Problèmes candidats : injectés (tests) ou dérivés du VRAI dépôt (TODO/FIXME)."""
+    if ctx.get("candidates"):
+        return list(ctx["candidates"])
     bus = ctx.get("bus")
     if bus is None:
-        return {"result": "dev : aucun tool bus fourni.", "confidence": 0.2, "sources": []}
+        return []
+    issues = bus.read("project", "search", pattern=r"TODO|FIXME|XXX").data or []
+    return [f"{h['fichier']}:{h['ligne']}" for h in issues]
+
+
+def _dev_handler(sg: SubGoal, ctx: dict) -> dict:
+    """Agent développement : observe le VRAI dépôt, ÉVITE les correctifs déjà refusés (mémoire)."""
+    bus = ctx.get("bus")
+    recall = ctx.get("memory_recall", {}) or {}
+    rejected = {r["content"] for r in recall.get("rejected", [])}
+
     if sg.kind == "read":
+        if bus is None:
+            return {"result": "dev : aucun tool bus.", "confidence": 0.2, "sources": []}
         commits = bus.read("project", "commits", n=3)
         status = bus.read("project", "status")
         mods = bus.read("project", "modules")
@@ -157,16 +189,26 @@ def _dev_handler(sg: SubGoal, ctx: dict) -> dict:
                f"(dernier : « {(commits.data or [{}])[0].get('sujet', '')[:48]} »), "
                f"{len(status.data or [])} fichier(s) modifié(s), {mods.data} modules.")
         return {"result": res, "confidence": 0.88, "sources": ["git (dépôt local)"]}
+
+    cands = _dev_candidates(ctx)
+    fresh = [c for c in cands if f"corriger {c}" not in rejected]
+
     if sg.kind == "analyze":
-        issues = bus.read("project", "search", pattern=r"TODO|FIXME|XXX")
-        n = len(issues.data or [])
-        sample = (issues.data or [{}])[0].get("texte", "") if n else ""
-        res = (f"{n} marqueur(s) TODO/FIXME dans le code — problèmes candidats"
-               + (f" (ex. « {sample[:60]} »)." if sample else "."))
-        return {"result": res, "confidence": 0.8, "sources": ["git (dépôt local)"]}
+        note = " — j'écarte un correctif déjà refusé" if len(fresh) != len(cands) else ""
+        return {"result": f"{len(cands)} problème(s) candidat(s){note}.", "confidence": 0.8,
+                "sources": ["git (dépôt local)"]}
+
     if sg.kind == "propose":
-        return {"result": "Correctif préparé (diff + test) — prêt, en attente de ton autorisation "
-                "avant toute écriture/commit.", "confidence": 0.6, "sources": ["git"]}
+        chosen = fresh[0] if fresh else (cands[0] if cands else "amélioration générique")
+        pre = ""
+        if rejected:
+            y = next(iter(rejected)).replace("corriger ", "")
+            pre = (f"Lors d'une analyse précédente, le correctif « {y} » avait été refusé ; "
+                   f"je ne le re-propose pas. ")
+        res = pre + f"Je propose plutôt : corriger « {chosen} » — en attente de ton autorisation."
+        return {"result": res, "confidence": 0.6, "sources": ["git"],
+                "decision": {"content": f"corriger {chosen}", "entities": ["repo"]}}
+
     return {"result": sg.text, "confidence": 0.5, "sources": []}
 
 
