@@ -1,0 +1,27 @@
+name: tests
+
+# Lance la suite HELYOS à chaque push/PR — fournit à HELYOS une preuve d'exécution
+# DISTANTE et indépendante (couche « CI distante » de la hiérarchie de vérité).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install optional deps
+        run: pip install "fastapi>=0.110" "uvicorn[standard]>=0.27" "pydantic>=2.5" coverage
+      - name: Run test suite
+        working-directory: apps/jarvis-kernel
+        env:
+          PYTHONPATH: src
+          HELYOS_PULSE_INTERVAL: "0"
+        run: python -m unittest discover -s tests -v

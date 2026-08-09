@@ -170,6 +170,17 @@ class GitHubConnector:
                                   [{"number": pr["number"], "title": pr["title"][:80]} for pr in d], src)
             if op == "languages":
                 return ReadResult(self.name, op, True, self._get(f"{base}/languages"), src)
+            if op == "runs":                            # runs GitHub Actions (CI distante)
+                d = self._get(f"{base}/actions/runs?per_page={p.get('n', 10)}")
+                rows = [{"run_number": r["run_number"], "name": r["name"], "status": r["status"],
+                         "conclusion": r["conclusion"], "head_sha": r["head_sha"][:7],
+                         "id": r["id"], "url": r["html_url"]} for r in d.get("workflow_runs", [])]
+                return ReadResult(self.name, op, True, rows, src)
+            if op == "jobs":
+                d = self._get(f"{base}/actions/runs/{p['run_id']}/jobs")
+                rows = [{"name": j["name"], "status": j["status"], "conclusion": j["conclusion"]}
+                        for j in d.get("jobs", [])]
+                return ReadResult(self.name, op, True, rows, src)
             return ReadResult(self.name, op, False, None, src, f"opération inconnue : {op}")
         except Exception as e:                          # réseau / rate-limit : échec honnête, pas de crash
             return ReadResult(self.name, op, False, None, src, f"GitHub indisponible : {type(e).__name__}")
