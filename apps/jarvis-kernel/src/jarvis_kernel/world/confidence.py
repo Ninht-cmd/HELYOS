@@ -19,9 +19,12 @@ import math
 from dataclasses import dataclass
 
 # Qualité de preuve par nature du finding (la nature prime sur la quantité).
+# Le mapping tests STATIQUE est PRÉLIMINAIRE (faible) ; la couverture RUNTIME est une
+# preuve d'exécution forte — mais pas 1.0 : « exécuté » n'est pas « testé avec assertion ».
 CATEGORY_WEIGHT = {
-    "architecture": 1.00, "broken_import": 0.98, "import_cycle": 0.95,
-    "complexity": 0.92, "untested": 0.82, "dead_code": 0.68, "text_pattern": 0.45,
+    "architecture": 1.00, "broken_import": 0.98, "runtime_asserted": 1.00, "import_cycle": 0.95,
+    "complexity": 0.92, "runtime_coverage": 0.90, "dead_code": 0.68,
+    "untested": 0.60, "static_test_mapping": 0.55, "text_pattern": 0.45,
 }
 # Demi-vies (en jours) par type de source — PAS de constante globale.
 HALF_LIVES = {"repo_metadata": 7.0, "source_code": 30.0, "ci": 0.25, "issue": 2.0,

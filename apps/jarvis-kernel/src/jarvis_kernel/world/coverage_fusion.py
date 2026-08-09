@@ -101,6 +101,78 @@ def changed_lines_coverage(covered_lines: list[int], changed_lines: list[int]) -
     return round(sum(1 for ln in changed_lines if ln in covered) / len(changed_lines), 4)
 
 
+@dataclass
+class CoverageVerdict:
+    status: str            # confirmed | contradicted | executed_no_assertion | partial | unknown
+    static_claim: str
+    runtime_fact: str
+    confidence: float
+    evidence: list = field(default_factory=list)
+
+
+class CoverageTruthResolver:
+    """AST propose, le runtime tranche. Distingue « exécuté » de « testé avec assertion » :
+    coverage.py prouve qu'une ligne s'exécute, pas qu'un comportement est vérifié."""
+
+    def resolve(self, static_finding: dict, coverage_map: dict, *, symbol_asserted: bool = False) -> CoverageVerdict:
+        cov_by = {_norm(k): v for k, v in coverage_map.items()}
+        claim = f"{static_finding.get('symbol')} : {static_finding.get('category')} (hypothèse AST)"
+        cov = cov_by.get(_norm(static_finding.get("file", "")))
+        if cov is None:
+            return CoverageVerdict("unknown", claim, "module non mesuré", 0.3,
+                                   ["coverage.py n'a pas mesuré ce fichier"])
+        pct = cov["coverage_pct"]
+        critical = CRITICALITY.get(_layer(static_finding.get("file", "")), 0.5) >= 0.8
+        if pct <= 0.05:
+            ev = ["coverage.py runtime report", "aucune ligne exécutée par la suite"]
+            if critical:
+                ev.append("code CRITIQUE jamais exécuté (couche sensible)")
+            return CoverageVerdict("confirmed", claim, f"{pct * 100:.0f}% exécuté", 0.99, ev)
+        if pct >= 0.70:
+            ev = ["coverage.py runtime report", f"{pct * 100:.0f}% exécuté : la claim « non exécuté » est fausse"]
+            if not symbol_asserted:
+                ev.append("nuance : exécuté transitivement mais aucun test ne NOMME le symbole "
+                          "(exécution ≠ validation comportementale)")
+            return CoverageVerdict("contradicted", claim, f"{pct * 100:.0f}% exécuté", 0.99, ev)
+        return CoverageVerdict("partial", claim, f"{pct * 100:.0f}% exécuté", 0.7,
+                               ["couverture partielle — vérité runtime incertaine"])
+
+
+def tested_symbols(root) -> set:
+    from .ast_analysis import build_index_from_root
+    _idx, tidx = build_index_from_root(root)
+    return tidx.all_used()
+
+
+def verify_coverage(root, memory=None, objective_id: str | None = None) -> dict:
+    """Boucle runtime-truth complète : AST génère les hypothèses « untested », coverage.py
+    tranche, la mémoire enregistre les verdicts (calibrant la fiabilité de l'analyseur)."""
+    from dataclasses import asdict as _asdict
+    from .ast_analysis import build_index_from_root, test_coverage_gaps
+    from .coverage_runner import measure_coverage
+    idx, tidx = build_index_from_root(root)
+    untested = [_asdict(f) for f in test_coverage_gaps(idx, tidx)]
+    cov = measure_coverage(root)
+    tested = tidx.all_used()
+    resolver = CoverageTruthResolver()
+    verdicts = [resolver.resolve(f, cov, symbol_asserted=(f.get("symbol") in tested)) for f in untested]
+    stats = {"confirmed": 0, "contradicted": 0, "partial": 0, "unknown": 0, "executed_no_assertion": 0}
+    for f, v in zip(untested, verdicts):
+        stats[v.status] = stats.get(v.status, 0) + 1
+        if memory is not None and objective_id is not None:
+            if v.status == "confirmed":
+                d = memory.record_decision(objective_id, "TestCoverageMapper",
+                                           f"non exécuté confirmé : {f['symbol']}", status="confirmed",
+                                           entities=[str(f["symbol"]), "category:untested"])
+                memory.record_outcome(d, observed=1.0, expected=1.0, note="0% runtime")
+            elif v.status == "contradicted":
+                d = memory.record_decision(objective_id, "TestCoverageMapper",
+                                           f"non testé INFIRMÉ : {f['symbol']}", status="proposed",
+                                           entities=[str(f["symbol"]), "category:untested"])
+                memory.set_decision_status(d, "rejected", v.runtime_fact)
+    return {"stats": stats, "verdicts": verdicts}
+
+
 def record_verifications(memory, objective_id: str, runtime: list[RuntimeCoverageFinding]) -> dict:
     """Transforme les verdicts runtime en OutcomeRecord automatiques → la fiabilité du
     TestCoverageMapper se calibre (confirmé = +1 ; infirmé = faux positif enregistré)."""

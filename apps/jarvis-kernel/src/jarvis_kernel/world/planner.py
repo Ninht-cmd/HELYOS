@@ -205,11 +205,22 @@ def _dev_findings(ctx: dict) -> list[dict]:
 
 
 def _dev_candidates(ctx: dict) -> list[str]:
-    """Recommandations issues de l'analyse AST (imports/deadcode/complexité/tests).
-    Injectables via ctx['candidates'] pour les tests."""
+    """Recommandations AST, RANGÉES par fiabilité mesurée de l'analyseur : un analyseur
+    devenu peu fiable (ex. TestCoverageMapper à 0.034 après vérification runtime) coule au
+    fond et ne fait plus remonter seul une priorité. Injectables via ctx['candidates']."""
     if ctx.get("candidates"):
         return list(ctx["candidates"])
-    return [f["recommendation"] for f in _dev_findings(ctx)] or ["amélioration générique"]
+    findings = _dev_findings(ctx)
+    mem = ctx.get("memory")
+    if mem is not None:
+        from .confidence import analyzer_reliability
+        order = {"high": 0, "medium": 1, "low": 2}
+        rel = {c: analyzer_reliability(mem, c)[0]
+               for c in {f["category"] for f in findings}}
+        findings = sorted(findings, key=lambda f: (-rel.get(f["category"], 0.6),
+                                                   order.get(f["severity"], 3)))
+        ctx["_findings"] = findings                # le cache reflète le nouvel ordre
+    return [f["recommendation"] for f in findings] or ["amélioration générique"]
 
 
 def _dev_handler(sg: SubGoal, ctx: dict) -> dict:
