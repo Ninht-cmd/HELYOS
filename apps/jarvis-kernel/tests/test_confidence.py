@@ -9,8 +9,8 @@ from jarvis_kernel.governance.autonomy import AutonomyLevel
 from jarvis_kernel.governance.policy import Action, ActionType, Decision
 from jarvis_kernel.governance.service import GovernanceService
 from jarvis_kernel.world.confidence import (CompositeConfidence, analyzer_reliability,
-                                            bayesian_reliability, composite_for,
-                                            evidence_quality, source_freshness)
+                                            bayesian_reliability, change_assurance,
+                                            composite_for, evidence_quality, source_freshness)
 from jarvis_kernel.world.memory_store import UnifiedMemory
 
 
@@ -70,6 +70,17 @@ class TestReliabilityLearns(unittest.TestCase):
         finding = {"category": "complexity", "evidence": ["CC=26"]}
         self.assertGreater(composite_for(finding, m).balanced,
                            composite_for(finding, None).balanced)
+
+
+class TestChangeAssurance(unittest.TestCase):
+    """4e niveau : la MODIFICATION est-elle prouvée ? (produit ; un maillon faible écrase)."""
+
+    def test_product_and_clipping(self) -> None:
+        self.assertEqual(change_assurance(True, 1.0, 1.0, True, 1.0), 1.0)
+        self.assertEqual(change_assurance(False, 1.0, 1.0, True, 1.0), 0.0)       # CI rouge écrase
+        self.assertEqual(change_assurance(True, 1.0, 0.0, True, 1.0), 0.0)        # chemin critique nu écrase
+        self.assertLess(change_assurance(True, 1.0, 1.0, False, 1.0), 0.5)        # sonde en échec pénalise
+        self.assertEqual(change_assurance(True, 2.0, 2.0, True, 2.0), 1.0)        # bornage [0,1]
 
 
 class TestGovernanceGuardrail(unittest.TestCase):

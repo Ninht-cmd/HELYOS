@@ -119,6 +119,28 @@ def agent_calibration(memory, agent: str = "dev_agent") -> float:
     return bayesian_reliability(c, r)
 
 
+def change_assurance(ci_ok: bool, diff_coverage: float, critical_path_coverage: float,
+                     behavioral_ok: bool, analyzer_reliability: float = 0.6) -> float:
+    """CHANGE assurance — 4e niveau de confiance : la MODIFICATION est-elle suffisamment
+    PROUVÉE ? (≠ « la CI est verte »). Produit borné [0,1] :
+
+        CI × couverture du diff × couverture des lignes critiques × sondes comportementales
+           × fiabilité de l'analyseur de diff.
+
+    Un maillon faible écrase (produit) : une CI verte dont les nouvelles lignes critiques ne
+    sont pas exercées reste FAIBLE. GARDE-FOU : cette mesure classe la qualité d'une
+    modification ; elle ne contourne JAMAIS la gouvernance (une assurance de 0.99 ne saute
+    pas GR-2)."""
+    b = 1.0 if behavioral_ok else 0.4        # sonde en échec = pénalité forte, pas nulle (un seul signal)
+    factors = [1.0 if ci_ok else 0.0, _clip(diff_coverage), _clip(critical_path_coverage),
+               b, _clip(analyzer_reliability)]
+    return round(math.prod(factors), 4)
+
+
+def _clip(x: float) -> float:
+    return max(0.0, min(1.0, float(x)))
+
+
 def composite_for(finding: dict, memory=None, *, source_age_days: float = 0.0,
                   source_type: str = "source_code") -> CompositeConfidence:
     """Assemble la confiance composite d'un finding à partir de bases RÉELLES."""

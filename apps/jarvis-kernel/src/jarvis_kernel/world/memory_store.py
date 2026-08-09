@@ -71,6 +71,7 @@ class OutcomeRecord:
     observed: float
     expected: float
     note: str = ""
+    assurance: dict = field(default_factory=dict)   # preuve de qualité (ex. change_assurance du diff)
 
 
 @dataclass
@@ -129,9 +130,11 @@ class UnifiedMemory:
         self.record_event("validation", d.objective_id, "human", f"{status}: {d.content}",
                           status=status, entities=d.entities)
 
-    def record_outcome(self, decision_id: str, observed: float, expected: float, note: str = "") -> str:
+    def record_outcome(self, decision_id: str, observed: float, expected: float, note: str = "",
+                       assurance: dict | None = None) -> str:
         oid = self._id("OUT")
-        self.outcomes[oid] = OutcomeRecord(oid, decision_id, self._clock(), observed, expected, note)
+        self.outcomes[oid] = OutcomeRecord(oid, decision_id, self._clock(), observed, expected, note,
+                                           dict(assurance or {}))
         self.decisions[decision_id].outcome_id = oid
         return oid
 
