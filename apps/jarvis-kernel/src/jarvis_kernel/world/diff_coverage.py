@@ -145,8 +145,9 @@ def parse_diff_added_lines(patch: str) -> dict:
 def git_diff(root, base: str, head: str) -> str:
     try:
         r = subprocess.run(["git", "diff", "--unified=0", f"{base}..{head}"],
-                           cwd=str(root), capture_output=True, text=True, timeout=15)
-        return r.stdout if r.returncode == 0 else ""
+                           cwd=str(root), capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=15)
+        return (r.stdout or "") if r.returncode == 0 else ""
     except Exception:
         return ""
 

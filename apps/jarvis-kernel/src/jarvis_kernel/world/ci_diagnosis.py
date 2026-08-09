@@ -92,8 +92,9 @@ def run_local_ci(root, tests_dir: str | None = None, pattern: str = "test_*.py")
     tdir = tests_dir or str(root / "apps" / "jarvis-kernel" / "tests")
     env = dict(os.environ, PYTHONPATH=str(src), PYTHONIOENCODING="utf-8", HELYOS_PULSE_INTERVAL="0")
     p = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", tdir, "-p", pattern],
-                       capture_output=True, text=True, env=env, cwd=str(root), timeout=300)
-    out = p.stdout + p.stderr
+                       capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       env=env, cwd=str(root), timeout=300)
+    out = (p.stdout or "") + (p.stderr or "")
     mtot = re.search(r"Ran (\d+) tests", out)
     mfail = re.search(r"FAILED \(.*?(?:failures=(\d+))?.*?(?:errors=(\d+))?.*?\)", out)
     failed = 0
@@ -108,8 +109,9 @@ def run_local_ci(root, tests_dir: str | None = None, pattern: str = "test_*.py")
 
 def _git(root, *args) -> str:
     try:
-        r = subprocess.run(["git", *args], cwd=str(root), capture_output=True, text=True, timeout=8)
-        return r.stdout.strip() if r.returncode == 0 else ""
+        r = subprocess.run(["git", *args], cwd=str(root), capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=8)
+        return (r.stdout or "").strip() if r.returncode == 0 else ""
     except Exception:
         return ""
 

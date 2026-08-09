@@ -45,8 +45,8 @@ class ProjectConnector:
     def _git(self, *args: str) -> str:
         try:
             r = subprocess.run(["git", *args], cwd=str(self.root), capture_output=True,
-                               text=True, timeout=8)
-            return r.stdout.strip() if r.returncode == 0 else ""
+                               text=True, encoding="utf-8", errors="replace", timeout=8)
+            return (r.stdout or "").strip() if r.returncode == 0 else ""
         except Exception:
             return ""
 
