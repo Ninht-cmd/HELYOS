@@ -85,6 +85,19 @@ autonome de se congratuler pour n'avoir rien cassé.
 - La couverture de branche fine (chaque arête d'un `if`) reste au niveau du fichier ; la
   granularité par arête sur les seules lignes du diff est un raffinement.
 
+### Durcissement (auto-revue adversariale)
+
+La revue déléguée à des sous-agents n'a pas pu s'exécuter (limite de session) ; elle a donc été
+menée en direct, par exécution de sondes. Deux **vrais bugs** trouvés et corrigés (tests de
+non-régression ajoutés) :
+- **parsing** : une ligne ajoutée dont le contenu commence par `++` (diff-line `+++x`) était
+  confondue avec un en-tête `+++ ` → ligne perdue et numéros suivants décalés. Corrigé par une
+  machine à états `in_hunk` (la structure du diff tranche, pas une heuristique de chaîne).
+- **dénominateur vide** : un fichier source modifié mais **absent** du rapport coverage.py
+  (nouveau module sans aucun test) laissait `diff_coverage` valoir 1.0 → **CHANGE_CONFIRMED**
+  à tort. Désormais un fichier non mesuré est traité comme **non couvert** (direction sûre) :
+  un module entièrement non testé ne peut jamais être confirmé.
+
 ## 6. Suite
 
 **Mutation testing ciblé sur les lignes critiques** : vérifier non seulement que les lignes

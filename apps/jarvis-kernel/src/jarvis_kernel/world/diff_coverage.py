@@ -116,12 +116,18 @@ def _layer(path: str) -> str:
 
 def parse_diff_added_lines(patch: str) -> dict:
     """Extrait, par fichier, l'ensemble des numéros de lignes AJOUTÉES/MODIFIÉES côté HEAD.
-    Robuste au format unifié (avec ou sans contexte)."""
+
+    Machine à états `in_hunk` : on distingue les EN-TÊTES de fichier (`+++ `/`--- `, hors
+    hunk) du CONTENU d'un hunk (où une ligne peut légitimement commencer par `+++`, ex.
+    `++x` en Python). C'est la structure du diff — pas une heuristique de chaîne — qui tranche."""
     added: dict[str, set] = {}
     cur: str | None = None
     newln = 0
+    in_hunk = False
     for line in patch.splitlines():
-        if line.startswith("+++ "):
+        if line.startswith("diff --git"):
+            in_hunk, cur = False, None
+        elif not in_hunk and line.startswith("+++ "):
             p = line[4:].strip()
             if p.startswith("b/"):
                 p = p[2:]
@@ -131,14 +137,17 @@ def parse_diff_added_lines(patch: str) -> dict:
         elif line.startswith("@@"):
             m = re.search(r"\+(\d+)(?:,(\d+))?", line)
             newln = int(m.group(1)) if m else 0
-        elif cur is not None:
-            if line.startswith("+") and not line.startswith("+++"):
+            in_hunk = True
+        elif in_hunk and cur is not None:
+            c = line[:1]
+            if c == "+":                        # ligne ajoutée (même si le contenu commence par '+')
                 added.setdefault(cur, set()).add(newln)
                 newln += 1
-            elif line.startswith("-") and not line.startswith("---"):
+            elif c == "-":
                 pass                            # ligne supprimée : le compteur HEAD n'avance pas
-            elif line.startswith(" ") or not line:
+            elif c == " ":                      # contexte : avance côté HEAD
                 newln += 1
+            # '\' (pas de newline final) et lignes vides résiduelles : ignorées
     return added
 
 
@@ -183,10 +192,21 @@ class DiffCoverageAnalyzer:
             if not _is_source(file):
                 continue
             cov = cov_by.get(_norm(file))
-            if cov is None:                     # fichier hors instrumentation : non mesuré (honnête)
+            if cov is None:
+                # Fichier source absent du rapport coverage.py = jamais importé/exécuté par la
+                # suite (typiquement un nouveau module sans test). On ne peut PAS prouver sa
+                # couverture → on le traite comme NON COUVERT (direction sûre), sinon un module
+                # entièrement non testé serait confirmé à tort par un dénominateur vide.
+                crit = _critical_added_lines(root, file, add_lines)
+                n = len(add_lines)
                 findings.append(DiffCoverageFinding(
                     file=file, decision_id=decision_id, base_sha=base_sha, head_sha=head_sha,
-                    ci_status=ci_status, evidence=["fichier non mesuré par coverage.py"]))
+                    changed_executable_lines=n, covered_changed_lines=0, diff_coverage_pct=0.0,
+                    critical_lines=sorted(crit), critical_lines_covered=[], ci_status=ci_status,
+                    behavioral_ok=behavioral_ok,
+                    evidence=["fichier non mesuré par coverage.py → traité comme non couvert"]))
+                tot_exec += n
+                crit_tot += len(crit)
                 continue
             executable = set(cov.get("executable_lines", []))
             covered = set(cov.get("covered_lines", []))

@@ -46,6 +46,18 @@ class TestParse(unittest.TestCase):
         f = "src/jarvis_kernel/governance/x.py"
         self.assertEqual(added[f], {11, 12, 22})       # 2 lignes du 1er hunk + 1 du second
 
+    def test_added_line_whose_content_starts_with_plus(self) -> None:
+        # régression : une ligne AJOUTÉE dont le contenu commence par '++' (diff-line '+++x')
+        # ne doit pas être confondue avec un en-tête '+++ ' ni décaler les numéros suivants.
+        patch = ("diff --git a/f.py b/f.py\n--- a/f.py\n+++ b/f.py\n@@ -5,0 +6,3 @@\n"
+                 "+++x = 1\n+normal = 2\n+y = 3\n")
+        self.assertEqual(parse_diff_added_lines(patch)["f.py"], {6, 7, 8})
+
+    def test_deleted_lines_do_not_advance_head_counter(self) -> None:
+        patch = ("diff --git a/f.py b/f.py\n--- a/f.py\n+++ b/f.py\n"
+                 "@@ -1,2 +1,2 @@\n-old\n+new\n ctx\n@@ -10,0 +11,1 @@\n+added\n")
+        self.assertEqual(parse_diff_added_lines(patch)["f.py"], {1, 11})
+
 
 class TestMath(unittest.TestCase):
     def _cov(self, executable, covered):
@@ -71,6 +83,16 @@ class TestMath(unittest.TestCase):
         self.assertGreater(change_assurance(True, 1.0, 1.0, True, 0.9), 0.8)
         # CI rouge -> 0 quoi qu'il arrive
         self.assertEqual(change_assurance(False, 1.0, 1.0, True, 0.9), 0.0)
+
+    def test_unmeasured_source_file_never_confirmed(self) -> None:
+        # régression : un fichier source MODIFIÉ mais absent du rapport coverage.py (nouveau
+        # module sans test) ne doit pas être confirmé par un dénominateur vide (diff = 1.0).
+        p = ("diff --git a/src/jarvis_kernel/world/brandnew.py b/src/jarvis_kernel/world/brandnew.py\n"
+             "--- /dev/null\n+++ b/src/jarvis_kernel/world/brandnew.py\n@@ -0,0 +1,3 @@\n"
+             "+def f():\n+    return 1\n+x = f()\n")
+        rep = DiffCoverageAnalyzer().analyze("b", "h", p, {}, root="/x", ci_status="success")
+        self.assertEqual(rep.diff_coverage, 0.0)                  # traité comme non couvert
+        self.assertEqual(rep.verdict, CHANGE_NOT_SUFFICIENTLY_VALIDATED)
 
     def test_verdicts(self) -> None:
         cov = self._cov(executable={11, 12}, covered={11, 12})                    # tout couvert
