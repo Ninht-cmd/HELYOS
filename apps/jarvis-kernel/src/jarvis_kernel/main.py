@@ -69,7 +69,8 @@ def create_app():
 
         @app.get("/", include_in_schema=False)
         def root():
-            return RedirectResponse(url="/app/")
+            # Front door = le Cockpit ENTREPRISE (vue dirigeant), plus le dashboard développeur.
+            return RedirectResponse(url="/app/os.html")
     else:  # repli : pas de dossier web (ex. install minimale)
         @app.get("/", response_class=HTMLResponse, include_in_schema=False)
         def root() -> str:

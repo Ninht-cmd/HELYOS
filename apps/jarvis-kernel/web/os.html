@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HELYOS OS — Cockpit</title>
+<style>
+  :root{
+    --bg:#0b0f17; --panel:#121826; --panel2:#0e1420; --line:#1e2838;
+    --txt:#e8edf6; --dim:#8a97ad; --accent:#39d0a8; --accent2:#4aa3ff;
+    --warn:#f5b942; --bad:#ff6b6b; --ok:#39d0a8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#12203a 0%,var(--bg) 55%);
+       color:var(--txt);font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+       -webkit-font-smoothing:antialiased;min-height:100vh}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 20px 60px}
+  /* top bar */
+  .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+  .brand{font-weight:800;letter-spacing:.5px;font-size:20px}
+  .brand b{color:var(--accent)}
+  .pill{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);
+        background:var(--panel);color:var(--dim);display:inline-flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  .dot.warn{background:var(--warn);box-shadow:0 0 10px var(--warn)}
+  .dot.off{background:var(--bad);box-shadow:none}
+  .spacer{flex:1}
+  .clock{font-variant-numeric:tabular-nums;color:var(--dim)}
+  .modebtn{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--txt);
+           padding:7px 12px;border-radius:10px;font-size:13px}
+  .modebtn b{color:var(--accent)}
+  /* hero */
+  .hero{display:grid;grid-template-columns:230px 1fr;gap:16px;margin-bottom:16px}
+  @media(max-width:820px){.hero{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+        border-radius:16px;padding:18px}
+  .score{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .ring{--v:0;width:150px;height:150px;border-radius:50%;display:grid;place-items:center;
+        background:conic-gradient(var(--accent) calc(var(--v)*1%),#1c2536 0);margin:4px 0 8px}
+  .ring>div{width:120px;height:120px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;flex-direction:column}
+  .ring .num{font-size:38px;font-weight:800;line-height:1}
+  .ring .lbl{font-size:11px;color:var(--dim);margin-top:2px}
+  .parts{width:100%;margin-top:6px;font-size:12px;color:var(--dim)}
+  .parts div{display:flex;justify-content:space-between;padding:2px 0}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .kpi .k{font-size:12px;color:var(--dim);display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .kpi .v{font-size:24px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums}
+  .tag{font-size:10px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
+  .tag.warn{color:var(--warn);border-color:#4a3d1c}
+  .tag.ok{color:var(--ok);border-color:#1c4a3c}
+  /* columns */
+  .cols{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:16px}
+  @media(max-width:820px){.cols{grid-template-columns:1fr}}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:0 0 12px}
+  .op{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .op:last-child{border-bottom:0}
+  .op .st{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .op .st.pret{background:var(--accent2);box-shadow:0 0 8px var(--accent2)}
+  .op .st.conn{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+  .op .txt{flex:1}
+  .op .dep{font-size:11px;color:var(--dim)}
+  .wait .op .st{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+  .wait .op .st.urg{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+  .empty{color:var(--dim);font-size:13px;padding:8px 0}
+  /* departments */
+  .deps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+  @media(max-width:820px){.deps{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:480px){.deps{grid-template-columns:1fr}}
+  .dep{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;
+       display:flex;align-items:center;gap:12px;transition:.15s;cursor:pointer}
+  .dep:hover{border-color:#2c3b52;transform:translateY(-1px)}
+  .dep .ic{font-size:22px}
+  .dep .nm{font-weight:700}
+  .dep .mt{font-size:12px;color:var(--dim)}
+  .badge{margin-left:auto;font-size:10px;padding:3px 8px;border-radius:999px;border:1px solid var(--line)}
+  .badge.actif{color:var(--ok);border-color:#1c4a3c}
+  .badge.pret{color:var(--accent2);border-color:#1c3a5a}
+  .badge.conn{color:var(--warn);border-color:#4a3d1c}
+  .foot{margin-top:26px;color:var(--dim);font-size:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .foot a{color:var(--accent2)}
+  .banner{margin:14px 0;padding:12px 14px;border:1px solid #4a3d1c;background:#1a1608;border-radius:12px;
+          color:#f5d98c;font-size:13px;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">HELY<b>OS</b> <span style="color:var(--dim);font-weight:500">Enterprise OS</span></div>
+    <span class="pill"><span class="dot" id="opdot"></span><span id="opstate">AI OPERATOR — 24/7</span></span>
+    <span class="pill">Autonomie <b id="auto" style="color:var(--txt);margin-left:4px">—</b></span>
+    <div class="spacer"></div>
+    <span class="clock" id="clock">—</span>
+    <button class="modebtn" id="mode" title="HELYOS opère par défaut ; le manuel reste ton backup">
+      Mode : <b>AI-first</b> · <span style="color:var(--dim)">manuel dispo</span></button>
+  </div>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="hero">
+    <div class="card score">
+      <div class="ring" id="ring"><div><div class="num" id="score">—</div><div class="lbl">ÉTAT GLOBAL</div></div></div>
+      <div class="parts" id="parts"></div>
+    </div>
+    <div class="card">
+      <div class="kpis" id="kpis"></div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <h2>HELYOS travaille actuellement sur <span id="opcount" style="color:var(--accent)">—</span> opérations</h2>
+      <div id="ops"></div>
+    </div>
+    <div class="card">
+      <h2>En attente de toi <span id="waitcount" style="color:var(--warn)"></span></h2>
+      <div class="wait" id="wait"></div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:26px">Départements</h2>
+  <div class="deps" id="deps"></div>
+
+  <div class="foot">
+    <span id="codex">—</span>
+    <span class="spacer"></span>
+    <a href="/app/">Interface développeur</a> ·
+    <a href="/docs">API</a> ·
+    <a href="/pulse/briefing">Briefing</a>
+  </div>
+</div>
+
+<script>
+const eur = n => (Number(n)||0).toLocaleString('fr-FR');
+const stCls = s => s==='prêt'?'pret':(s.indexOf('connect')>=0?'conn':'');
+const badgeCls = s => s==='actif'?'actif':(s==='prêt'?'pret':'conn');
+
+async function load(){
+  let d;
+  try{ d = await (await fetch('/os/cockpit',{cache:'no-store'})).json(); }
+  catch(e){ document.getElementById('opstate').textContent='HORS LIGNE'; document.getElementById('opdot').className='dot off'; return; }
+
+  // operator
+  document.getElementById('clock').textContent = d.clock;
+  document.getElementById('auto').textContent = d.operator.autonomy;
+  const online = d.operator.online;
+  document.getElementById('opdot').className = 'dot' + (online?'':' off');
+  document.getElementById('opstate').textContent = 'AI OPERATOR — 24/7 — ' + (online?'ONLINE':'OFFLINE');
+  document.getElementById('codex').textContent = d.codex;
+
+  // score
+  const s = d.score.value;
+  document.getElementById('score').textContent = s + '/100';
+  document.getElementById('ring').style.setProperty('--v', s);
+  document.getElementById('parts').innerHTML = Object.entries(d.score.parts)
+    .map(([k,v])=>`<div><span>${k}</span><span>${v}</span></div>`).join('');
+
+  // kpis
+  document.getElementById('kpis').innerHTML = d.kpis.map(k=>{
+    const tag = k.state==='réel' ? '<span class="tag ok">réel</span>' : '<span class="tag warn">à connecter</span>';
+    const val = k.unit==='€' ? eur(k.value)+' €' : (eur(k.value) + (k.unit?(' '+k.unit):''));
+    return `<div class="kpi"><div class="k">${k.label} ${tag}</div><div class="v">${val}</div></div>`;
+  }).join('');
+
+  // operations
+  document.getElementById('opcount').textContent = d.operations.count;
+  document.getElementById('ops').innerHTML = d.operations.items.map(o=>
+    `<div class="op"><span class="st ${o.state==='prêt'?'pret':(o.state.indexOf('connect')>=0?'conn':'')}"></span>
+      <div class="txt">${o.label}<div class="dep">${o.dept} · ${o.state}</div></div></div>`).join('');
+
+  // waiting on you
+  const w = d.waiting_on_you||[];
+  document.getElementById('waitcount').textContent = w.length? '('+w.length+')':'';
+  document.getElementById('wait').innerHTML = w.length ? w.map(i=>
+    `<div class="op"><span class="st ${i.urgent?'urg':''}"></span><div class="txt">${i.text||''}</div></div>`).join('')
+    : '<div class="empty">Rien ne te bloque. Le silence = tout fonctionne.</div>';
+
+  // banner: HELYOS bloqué sur des tâches humaines
+  const humanTasks = w.filter(i => (i.kind==='task'||i.kind==='connector')).length;
+  if(humanTasks){
+    const b=document.getElementById('banner');
+    b.style.display='block';
+    b.innerHTML = `HELYOS est prêt et opère, mais <b>${humanTasks} action(s) dépendent de toi</b> (connecteurs, paiement). L'IA gère le reste ; tu restes l'opérateur de secours.`;
+  }
+
+  // departments
+  document.getElementById('deps').innerHTML = d.departments.map(dep=>{
+    const clickable = dep.route ? `onclick="location.href='${dep.route}'"` : '';
+    return `<div class="dep" ${clickable}><span class="ic">${dep.icon}</span>
+      <div><div class="nm">${dep.name}</div><div class="mt">${dep.metric}</div></div>
+      <span class="badge ${badgeCls(dep.status)}">${dep.status}</span></div>`;
+  }).join('');
+}
+
+// Mode manuel : bascule d'affichage (AI-first par défaut ; l'override réel = IAM à venir).
+let manual=false;
+document.getElementById('mode').addEventListener('click',()=>{
+  manual=!manual;
+  document.getElementById('mode').innerHTML = manual
+    ? 'Mode : <b style="color:var(--warn)">Manuel</b> · <span style="color:var(--dim)">IA en veille</span>'
+    : 'Mode : <b>AI-first</b> · <span style="color:var(--dim)">manuel dispo</span>';
+});
+
+load(); setInterval(load, 15000);
+</script>
+</body>
+</html>
