@@ -213,13 +213,28 @@ async function load(){
   }).join('');
 }
 
-// Mode manuel : bascule d'affichage (AI-first par défaut ; l'override réel = IAM à venir).
-let manual=false;
-document.getElementById('mode').addEventListener('click',()=>{
-  manual=!manual;
-  document.getElementById('mode').innerHTML = manual
-    ? 'Mode : <b style="color:var(--warn)">Manuel</b> · <span style="color:var(--dim)">IA en veille</span>'
-    : 'Mode : <b>AI-first</b> · <span style="color:var(--dim)">manuel dispo</span>';
+// Mode manuel : ÉTAT SYSTÈME réel et audité (POST /os/manual, /os/resume).
+async function renderMode(){
+  let s; try{ s = await (await fetch('/os/operations',{cache:'no-store'})).json(); }catch(e){ return; }
+  const b = document.getElementById('mode');
+  const suspended = Object.entries(s.services||{}).filter(([k,v])=>v==='SUSPENDED').map(([k])=>k);
+  if(s.mode==='AI_FIRST'){
+    b.innerHTML = 'Mode : <b>AI-first</b> · <span style="color:var(--dim)">reprendre la main</span>';
+  } else {
+    b.innerHTML = `Mode : <b style="color:var(--warn)">${s.mode}</b> · <span style="color:var(--dim)">`
+      + (suspended.length? suspended.length+' agent(s) suspendu(s) · ':'') + 'rendre la main à HELYOS</span>';
+  }
+}
+document.getElementById('mode').addEventListener('click', async ()=>{
+  let s; try{ s = await (await fetch('/os/operations',{cache:'no-store'})).json(); }catch(e){ return; }
+  if(s.mode==='AI_FIRST'){
+    await fetch('/os/manual',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({actor:'emeric',why:'reprise manuelle depuis le cockpit'})});
+  } else {
+    await fetch('/os/resume',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({actor:'emeric',reason:'reprise HELYOS depuis le cockpit'})});
+  }
+  renderMode(); load(); loadRegistry();
 });
 
 const SYM = {ACTIVE:'●', DEGRADED:'◐', AVAILABLE:'○', STOPPED:'○', MISCONFIGURED:'○', BROKEN:'✕', MISSING:'✕'};
@@ -245,8 +260,8 @@ async function loadRegistry(){
   }).join('');
 }
 
-load(); loadRegistry();
-setInterval(()=>{ load(); loadRegistry(); }, 15000);
+load(); loadRegistry(); renderMode();
+setInterval(()=>{ load(); loadRegistry(); renderMode(); }, 15000);
 </script>
 </body>
 </html>

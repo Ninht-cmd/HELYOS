@@ -34,9 +34,14 @@ class TestSystemRegistry(unittest.TestCase):
                                 f"{b['id']} marqué ACTIVE sans preuve")
 
     def test_unbuilt_bricks_are_missing_not_active(self) -> None:
-        for bid in ("iam", "safe_mode", "manual_override", "payment_connector",
-                    "marketing", "sav", "rh", "administration"):
+        for bid in ("iam", "payment_connector", "marketing", "sav", "rh", "administration"):
             self.assertEqual(self.byid[bid]["status"], MISSING, bid)
+
+    def test_manual_override_and_safe_mode_are_built_active(self) -> None:
+        # ces briques existent réellement (machine à états + gate + tests) → ACTIVE, pas une carte
+        self.assertEqual(self.byid["manual_override"]["status"], ACTIVE)
+        self.assertEqual(self.byid["safe_mode"]["status"], ACTIVE)
+        self.assertTrue(self.byid["manual_override"]["engine"])
 
     def test_source_only_engines_never_active(self) -> None:
         # TensorRT-LLM / Triton / NeMo = source clonée -> jamais ACTIVE (pas de moteur construit)

@@ -208,8 +208,20 @@ def probe_helyos(ctx) -> list:
     for bid in ("marketing", "sav", "rh", "administration"):
         brick(bid, MISSING, evidence=["carte d'UI seulement — aucun moteur/donnée (à construire)"])
     brick("iam", MISSING, evidence=["Organization/Users/Roles/Permissions/Scopes/AI-permissions à construire"])
-    brick("manual_override", MISSING, evidence=["état AI_FIRST↔MANUAL réel + audit à construire"])
-    brick("safe_mode", MISSING, evidence=["exploitation dégradée sans le cerveau IA à construire"])
+    # Manual Override + SAFE MODE : ACTIVE seulement si la machine à états réelle existe (pas une carte).
+    ops = getattr(ctx, "operations", None)
+    if ops is not None:
+        rd = ops.readiness()
+        snap = ops.snapshot()
+        mo = ACTIVE if all(rd["manual_override"].values()) else DEGRADED
+        sm = ACTIVE if all(rd["safe_mode"].values()) else DEGRADED
+        brick("manual_override", mo, engine=True, backend=True, tests=1, manual_backup=True,
+              evidence=[f"machine à états ({snap['mode']}) · suspension d'agents · handover audité · restore AI"])
+        brick("safe_mode", sm, engine=True, backend=True, tests=1,
+              evidence=["incident→SAFE MODE · actions externes bloquées · CRM/données/audit en ligne · recovery testé"])
+    else:
+        brick("manual_override", MISSING, evidence=["état AI_FIRST↔MANUAL réel + audit à construire"])
+        brick("safe_mode", MISSING, evidence=["exploitation dégradée sans le cerveau IA à construire"])
     brick("payment_connector", MISSING, evidence=["aucun canal d'encaissement (Stripe/Gumroad) branché"])
 
     # Cockpit Node : conservé comme RÉFÉRENCE (données figées → jamais source de vérité).

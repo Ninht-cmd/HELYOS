@@ -41,6 +41,7 @@ class KernelContext:
     jarvis: object | None = None  # instance Jarvis (câblée dans build_default_context)
     connectors: list = None       # connecteurs vers le monde réel (RFC-0009), tous gouvernés
     pulse: object | None = None   # le Pouls : observation continue + briefing (RFC-0012)
+    operations: object | None = None  # exploitation : Manual Override + SAFE MODE (AI-first, fail-operational)
 
 
 def build_default_context(settings: Settings | None = None) -> KernelContext:
@@ -114,6 +115,14 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
 
     from .connectors import build_connectors
     ctx.connectors = build_connectors(cfg)
+
+    # Exploitation AI-first / fail-operational : Manual Override + SAFE MODE, gouvernés.
+    from .operations import OperationsController
+    ctx.operations = OperationsController(memory=memory, bus=bus)
+    for a in registry.list():
+        name = a.describe().get("name", "")
+        ctx.operations.register_agent(name if name.endswith("_agent") else f"{name}_agent")
+    governance.operations = ctx.operations   # un agent SUSPENDED est bloqué au niveau gouvernance
 
     from .pulse import Pulse
     ctx.pulse = Pulse(ctx)   # la boucle de fond n'est démarrée que par l'app (main.py)

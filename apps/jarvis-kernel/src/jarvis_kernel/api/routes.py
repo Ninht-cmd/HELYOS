@@ -275,6 +275,50 @@ def os_cockpit(request: Request) -> dict:
     }
 
 
+@router.get("/os/operations", tags=["operations"])
+def os_operations(request: Request) -> dict:
+    """État d'exploitation réel : mode (AI_FIRST/MANUAL_OVERRIDE/SAFE_MODE/RECOVERY), état
+    par service, dernier handover. Lecture."""
+    ops = _ctx(request).operations
+    if ops is None:
+        raise HTTPException(status_code=503, detail="Contrôleur d'exploitation indisponible.")
+    return {**ops.snapshot(), "readiness": ops.readiness()}
+
+
+@router.post("/os/manual", tags=["operations"])
+def os_manual(request: Request, body: dict) -> dict:
+    """Reprise manuelle DÉLIBÉRÉE (bouton « Mode manuel »). Suspend les agents (ou un scope),
+    audité who/what/when/why. Pré-IAM : à sécuriser par l'IAM natif (jalon suivant)."""
+    ops = _ctx(request).operations
+    if ops is None:
+        raise HTTPException(status_code=503, detail="Contrôleur d'exploitation indisponible.")
+    h = ops.take_over(str(body.get("actor", "human")), str(body.get("why", "reprise manuelle")),
+                      scope=body.get("scope") or None)
+    return {"mode": ops.mode, "handover": {"who": h.who, "what": h.what, "why": h.why}}
+
+
+@router.post("/os/safe", tags=["operations"])
+def os_safe(request: Request, body: dict) -> dict:
+    """Déclenche le SAFE MODE (incident). Les services métier/données/audit restent en ligne."""
+    ops = _ctx(request).operations
+    if ops is None:
+        raise HTTPException(status_code=503, detail="Contrôleur d'exploitation indisponible.")
+    ops.enter_safe_mode(str(body.get("reason", "incident")), actor=str(body.get("actor", "human")),
+                        scope=body.get("scope") or None)
+    return ops.snapshot()
+
+
+@router.post("/os/resume", tags=["operations"])
+def os_resume(request: Request, body: dict) -> dict:
+    """Rendre la main à HELYOS : RECOVERY (relecture → MemoryEvent) puis AI_FIRST. Explicite, audité."""
+    ctx = _ctx(request)
+    if ctx.operations is None:
+        raise HTTPException(status_code=503, detail="Contrôleur d'exploitation indisponible.")
+    res = ctx.operations.return_to_ai(str(body.get("actor", "human")),
+                                      str(body.get("reason", "incident résolu")))
+    return {**ctx.operations.snapshot(), "recovery": res}
+
+
 @router.get("/os/registry", tags=["cockpit"])
 def os_registry(request: Request) -> dict:
     """Brick Registry — la vérité opérationnelle SONDÉE en direct (matériel, runtime IA,
