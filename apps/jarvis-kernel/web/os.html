@@ -83,6 +83,20 @@
   .foot a{color:var(--accent2)}
   .banner{margin:14px 0;padding:12px 14px;border:1px solid #4a3d1c;background:#1a1608;border-radius:12px;
           color:#f5d98c;font-size:13px;display:none}
+  /* registry */
+  .regcat{margin:12px 0 6px;font-size:12px;color:var(--dim);display:flex;justify-content:space-between;
+          border-bottom:1px solid var(--line);padding-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+  .reggrid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 20px}
+  @media(max-width:640px){.reggrid{grid-template-columns:1fr}}
+  .reg{display:flex;align-items:baseline;gap:9px;padding:5px 0;font-size:13px}
+  .reg .sym{font-size:13px;width:14px;flex:none;text-align:center}
+  .reg .id{font-weight:600;min-width:150px}
+  .reg .stt{font-size:10px;letter-spacing:.5px;color:var(--dim)}
+  .reg .ev{color:var(--dim);font-size:11px;flex:1}
+  .s-ACTIVE .sym{color:var(--ok)} .s-ACTIVE .stt{color:var(--ok)}
+  .s-DEGRADED .sym{color:var(--warn)} .s-DEGRADED .stt{color:var(--warn)}
+  .s-AVAILABLE .sym{color:var(--accent2)} .s-STOPPED .sym{color:var(--warn)} .s-MISCONFIGURED .sym{color:var(--warn)}
+  .s-MISSING .sym{color:var(--bad)} .s-MISSING .stt{color:var(--bad)} .s-BROKEN .sym{color:var(--bad)}
 </style>
 </head>
 <body>
@@ -122,6 +136,11 @@
 
   <h2 style="margin-top:26px">Départements</h2>
   <div class="deps" id="deps"></div>
+
+  <h2 style="margin-top:26px">Registre opérationnel
+    <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">— sondé en direct · jamais ACTIVE sans preuve runtime</span>
+    <span id="regscore" style="color:var(--accent)"></span></h2>
+  <div id="registry"></div>
 
   <div class="foot">
     <span id="codex">—</span>
@@ -203,7 +222,31 @@ document.getElementById('mode').addEventListener('click',()=>{
     : 'Mode : <b>AI-first</b> · <span style="color:var(--dim)">manuel dispo</span>';
 });
 
-load(); setInterval(load, 15000);
+const SYM = {ACTIVE:'●', DEGRADED:'◐', AVAILABLE:'○', STOPPED:'○', MISCONFIGURED:'○', BROKEN:'✕', MISSING:'✕'};
+const CATLBL = {hardware:'Matériel', ai_runtime:'AI Runtime', infrastructure:'Infrastructure',
+                helyos:'HELYOS', reference:'Référence'};
+async function loadRegistry(){
+  let d;
+  try{ d = await (await fetch('/os/registry',{cache:'no-store'})).json(); }catch(e){ return; }
+  document.getElementById('regscore').textContent = ' ' + d.overall + '/100';
+  const byCat = {};
+  d.bricks.forEach(b => (byCat[b.category] = byCat[b.category]||[]).push(b));
+  const order = ['helyos','ai_runtime','infrastructure','hardware','reference'];
+  document.getElementById('registry').innerHTML = order.filter(c=>byCat[c]).map(cat=>{
+    const meta = d.categories[cat]||{score:0};
+    const rows = byCat[cat].map(b=>{
+      const ev = (b.evidence&&b.evidence[0])||'';
+      return `<div class="reg s-${b.status}"><span class="sym">${SYM[b.status]||'○'}</span>
+        <span class="id">${b.id}</span><span class="stt">${b.status}</span>
+        <span class="ev">${ev}</span></div>`;
+    }).join('');
+    return `<div class="regcat"><span>${CATLBL[cat]||cat}</span><span>${meta.score}/100</span></div>
+            <div class="reggrid">${rows}</div>`;
+  }).join('');
+}
+
+load(); loadRegistry();
+setInterval(()=>{ load(); loadRegistry(); }, 15000);
 </script>
 </body>
 </html>

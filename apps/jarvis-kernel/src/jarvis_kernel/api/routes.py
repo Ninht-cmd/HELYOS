@@ -275,6 +275,15 @@ def os_cockpit(request: Request) -> dict:
     }
 
 
+@router.get("/os/registry", tags=["cockpit"])
+def os_registry(request: Request) -> dict:
+    """Brick Registry — la vérité opérationnelle SONDÉE en direct (matériel, runtime IA,
+    infra, briques HELYOS). Zéro coquille vide : rien n'est ACTIVE sans preuve runtime.
+    Lecture seule (aucune installation/démarrage)."""
+    from ..integrations.system_registry import build_registry
+    return build_registry(_ctx(request))
+
+
 @router.get("/agents", response_model=list[AgentInfo], tags=["agents"])
 def list_agents(request: Request) -> list[AgentInfo]:
     return [AgentInfo(**a.describe()) for a in _ctx(request).registry.list()]
