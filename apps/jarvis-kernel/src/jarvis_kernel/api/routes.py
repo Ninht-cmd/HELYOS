@@ -275,6 +275,30 @@ def os_cockpit(request: Request) -> dict:
     }
 
 
+@router.get("/os/iam", tags=["iam"])
+def os_iam(request: Request) -> dict:
+    """État de l'IAM : identités (humains + agents), rôles, périmètres, readiness, audit récent."""
+    iam = _ctx(request).iam
+    if iam is None:
+        raise HTTPException(status_code=503, detail="IAM indisponible.")
+    return {"identities": [{"id": i.id, "kind": i.kind, "display": i.display,
+                            "businesses": sorted(i.businesses), "max_autonomy": i.max_autonomy,
+                            "status": i.status} for i in iam.identities.values()],
+            "roles": {n: sorted(r.permissions) for n, r in iam.roles.items()},
+            "readiness": iam.readiness(), "audit": iam.audit(20)}
+
+
+@router.post("/os/iam/authorize", tags=["iam"])
+def os_iam_authorize(request: Request, body: dict) -> dict:
+    """Point de décision (PDP) : autorise (subject, action, resource, context). Lecture/diagnostic."""
+    iam = _ctx(request).iam
+    if iam is None:
+        raise HTTPException(status_code=503, detail="IAM indisponible.")
+    d = iam.authorize(str(body.get("subject", "")), str(body.get("action", "")),
+                      str(body.get("resource", "")), body.get("context") or {})
+    return vars(d)
+
+
 @router.get("/os/operations", tags=["operations"])
 def os_operations(request: Request) -> dict:
     """État d'exploitation réel : mode (AI_FIRST/MANUAL_OVERRIDE/SAFE_MODE/RECOVERY), état

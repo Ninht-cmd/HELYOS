@@ -42,6 +42,7 @@ class KernelContext:
     connectors: list = None       # connecteurs vers le monde réel (RFC-0009), tous gouvernés
     pulse: object | None = None   # le Pouls : observation continue + briefing (RFC-0012)
     operations: object | None = None  # exploitation : Manual Override + SAFE MODE (AI-first, fail-operational)
+    iam: object | None = None     # contrôle d'accès unifié (humains + agents + services)
 
 
 def build_default_context(settings: Settings | None = None) -> KernelContext:
@@ -123,6 +124,10 @@ def build_default_context(settings: Settings | None = None) -> KernelContext:
         name = a.describe().get("name", "")
         ctx.operations.register_agent(name if name.endswith("_agent") else f"{name}_agent")
     governance.operations = ctx.operations   # un agent SUSPENDED est bloqué au niveau gouvernance
+
+    # IAM entreprise : identités (humains + agents), rôles, périmètres, profils IA.
+    from .iam import IAM, seed_default_iam
+    ctx.iam = seed_default_iam(IAM())
 
     from .pulse import Pulse
     ctx.pulse = Pulse(ctx)   # la boucle de fond n'est démarrée que par l'app (main.py)

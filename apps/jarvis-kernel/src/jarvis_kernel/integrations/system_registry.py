@@ -207,7 +207,17 @@ def probe_helyos(ctx) -> list:
     # Briques attendues mais NON construites (jamais ACTIVE).
     for bid in ("marketing", "sav", "rh", "administration"):
         brick(bid, MISSING, evidence=["carte d'UI seulement — aucun moteur/donnée (à construire)"])
-    brick("iam", MISSING, evidence=["Organization/Users/Roles/Permissions/Scopes/AI-permissions à construire"])
+    iam = getattr(ctx, "iam", None)
+    if iam is not None:
+        rd = iam.readiness()
+        n_id = len(getattr(iam, "identities", {}))
+        n_ag = sum(1 for i in iam.identities.values() if i.kind == "AI_AGENT")
+        brick("iam", ACTIVE if all(rd.values()) else DEGRADED, engine=True, backend=True,
+              database=True, tests=1,
+              evidence=[f"RBAC+ABAC+ReBAC · {n_id} identités ({n_ag} agents) · business scopes · "
+                        "profils IA · break-glass · self-permission DENY · audit"])
+    else:
+        brick("iam", MISSING, evidence=["Organization/Users/Roles/Permissions/Scopes/AI-permissions à construire"])
     # Manual Override + SAFE MODE : ACTIVE seulement si la machine à états réelle existe (pas une carte).
     ops = getattr(ctx, "operations", None)
     if ops is not None:
