@@ -186,16 +186,17 @@ def probe_helyos(ctx) -> list:
 
     # Départements « métier » : réels seulement si moteur + données.
     try:
-        from ..business.prospection import ProspectionPipeline
-        ps = ProspectionPipeline(ctx.memory).stats()
+        from ..business.crm import CRMWorkflow
+        snap = CRMWorkflow(ctx.memory).snapshot()
     except Exception:
-        ps = {"total": 0, "clients": 0}
+        snap = {"opportunities": 0, "won": 0, "revenue_eur": 0, "active": False}
     connected = sum(1 for c in (ctx.connectors or []) if c.status().status == "connected")
-    crm_real = (ps.get("total", 0) or 0) > 0
-    brick("crm_sales", DEGRADED if not crm_real else ACTIVE, backend=True, real_data=crm_real,
-          connectors=connected, ai_agent="prospection",
-          evidence=[f"backend prospection ✓, {ps.get('total',0)} prospect(s), "
-                    f"connecteur email/paiement : {'à brancher' if connected == 0 else str(connected)}"])
+    # ACTIVE seulement quand la boucle a produit un Outcome (zéro coquille vide).
+    brick("crm_sales", ACTIVE if snap["active"] else DEGRADED, backend=True,
+          real_data=snap["active"], connectors=connected, ai_agent="sales_agent", tests=1,
+          evidence=[f"boucle gouvernée · {snap['opportunities']} opportunité(s), {snap['won']} "
+                    f"gagnée(s), {snap['revenue_eur']}€" + ("" if snap["active"] else
+                    " — DEGRADED tant qu'aucun Outcome (lead→…→vente) n'a bouclé")])
     try:
         led = ctx.ledger.global_summary() if ctx.ledger else {"recettes_eur": 0}
     except Exception:

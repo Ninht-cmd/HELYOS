@@ -275,6 +275,56 @@ def os_cockpit(request: Request) -> dict:
     }
 
 
+@router.get("/os/crm", tags=["crm"])
+def os_crm(request: Request) -> dict:
+    """État réel du CRM/Sales : opportunités, qualifiées, ventes gagnées, revenu, actif ?"""
+    from ..business.crm import CRMWorkflow
+    ctx = _ctx(request)
+    crm = CRMWorkflow(ctx.memory, iam=ctx.iam, governance=ctx.governance, llm=ctx.llm)
+    return {**crm.snapshot(), "opportunities_list": crm._opps()}
+
+
+@router.post("/os/crm/lead", tags=["crm"])
+def os_crm_lead(request: Request, body: dict) -> dict:
+    """Ingestion d'un lead (scope IAM) + qualification. `actor` = identité (ex. sales_agent)."""
+    from ..business.crm import CRMWorkflow
+    ctx = _ctx(request)
+    crm = CRMWorkflow(ctx.memory, iam=ctx.iam, governance=ctx.governance, llm=ctx.llm)
+    actor = str(body.get("actor", "sales_agent"))
+    name = str(body.get("name", "")).strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="name requis")
+    r = crm.ingest_lead(actor, name, company=str(body.get("company", "")),
+                        contact=str(body.get("contact", "")), note=str(body.get("note", "")))
+    if not r.get("allowed"):
+        return r
+    q = crm.qualify(actor, name)
+    if body.get("value_eur"):
+        crm.create_opportunity(name, float(body["value_eur"]))
+    return {**r, **q}
+
+
+@router.post("/os/crm/send", tags=["crm"])
+def os_crm_send(request: Request, body: dict) -> dict:
+    """Prépare + demande l'envoi (GR-2). Sans `validated=true`, HELYOS prépare mais n'envoie pas."""
+    from ..business.crm import CRMWorkflow
+    ctx = _ctx(request)
+    crm = CRMWorkflow(ctx.memory, iam=ctx.iam, governance=ctx.governance, llm=ctx.llm)
+    actor, name = str(body.get("actor", "sales_agent")), str(body.get("name", ""))
+    crm.prepare_email(actor, name)
+    return crm.request_send(actor, name, validated=bool(body.get("validated", False)))
+
+
+@router.post("/os/crm/close", tags=["crm"])
+def os_crm_close(request: Request, body: dict) -> dict:
+    """Clôture (gagné/perdu) → Outcome + vente au carnet de commandes si gagné."""
+    from ..business.crm import CRMWorkflow
+    ctx = _ctx(request)
+    crm = CRMWorkflow(ctx.memory, iam=ctx.iam, governance=ctx.governance, llm=ctx.llm)
+    return crm.close(str(body.get("actor", "sales_agent")), str(body.get("name", "")),
+                     won=bool(body.get("won", True)), amount=float(body.get("amount", 0) or 0))
+
+
 @router.get("/os/iam", tags=["iam"])
 def os_iam(request: Request) -> dict:
     """État de l'IAM : identités (humains + agents), rôles, périmètres, readiness, audit récent."""
